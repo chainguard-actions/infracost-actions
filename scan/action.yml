@@ -1,0 +1,110 @@
+name: "Infracost Scan"
+description: "Scan infrastructure code and upload baseline cost data to the Infracost dashboard."
+
+inputs:
+  api-key:
+    description: "Infracost API key for authentication."
+    required: true
+  path:
+    description: "Path to the directory to scan."
+    required: true
+  version:
+    description: "Version of the scanner to use (e.g. 0.1.0). Defaults to latest."
+    required: false
+    default: "latest"
+  project:
+    description: "Filter scanning to a single project."
+    required: false
+  repo-url:
+    description: "Repository URL for metadata."
+    required: false
+  github-token:
+    description: "GitHub API token used to download the scanner binary."
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Determine version
+      id: version
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [ "$VERSION" = "latest" ]; then
+          RELEASE=$(gh release list --repo "infracost/actions" --limit 50 --json tagName --jq '[.[] | select(.tagName | startswith("scanner/v"))][0].tagName')
+          if [ -z "$RELEASE" ]; then
+            echo "::error::No scanner release found"
+            exit 1
+          fi
+          VERSION="${RELEASE#scanner/v}"
+        fi
+        safe_version=$(printf '%s' "$VERSION" | tr -d '\n\r')
+        echo "version=${safe_version}" >> $GITHUB_OUTPUT
+        echo "tag=scanner/v${safe_version}" >> $GITHUB_OUTPUT
+
+    - name: Download scanner
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ steps.version.outputs.tag }}
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        case "$ARCH" in
+          x86_64) ARCH="amd64" ;;
+          aarch64|arm64) ARCH="arm64" ;;
+        esac
+
+        ARCHIVE="infracost-scanner_${VERSION}_${OS}_${ARCH}.tar.gz"
+        DEST="${RUNNER_TEMP}/infracost-scanner"
+
+        gh release download "$TAG" \
+          --repo "infracost/actions" \
+          --pattern "$ARCHIVE" \
+          --dir "$RUNNER_TEMP"
+
+        mkdir -p "$(dirname "$DEST")"
+        tar -xzf "${RUNNER_TEMP}/${ARCHIVE}" -C "$RUNNER_TEMP"
+        chmod +x "$DEST"
+        echo "${RUNNER_TEMP}" >> $GITHUB_PATH
+
+    - name: Derive context
+      id: context
+      shell: bash
+      env:
+        INPUT_REPO_URL: ${{ inputs.repo-url }}
+      run: |
+        REPO_URL="$INPUT_REPO_URL"
+
+        if [ -z "$REPO_URL" ]; then
+          REPO_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+        fi
+
+        safe_repo_url=$(printf '%s' "$REPO_URL" | tr -d '\n\r')
+        echo "repo-url=${safe_repo_url}" >> $GITHUB_OUTPUT
+
+    - name: Run scanner
+      shell: bash
+      env:
+        INFRACOST_CLI_AUTHENTICATION_TOKEN: ${{ inputs.api-key }}
+        INFRACOST_CLI_LOG_LEVEL: info
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_PROJECT: ${{ inputs.project }}
+        CTX_REPO_URL: ${{ steps.context.outputs.repo-url }}
+      run: |
+        ARGS=(
+          scan
+          --path "$INPUT_PATH"
+          --repo-url "$CTX_REPO_URL"
+          --pipeline-run-id "${GITHUB_RUN_ID}"
+        )
+
+        if [ -n "$INPUT_PROJECT" ]; then
+          ARGS+=(--project "$INPUT_PROJECT")
+        fi
+
+        infracost-scanner "${ARGS[@]}"

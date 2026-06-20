@@ -1,0 +1,77 @@
+name: Test basic usage - required inputs accepted
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/pull/1/merge
+      GITHUB_EVENT_NAME: pull_request
+      GITHUB_HEAD_REF: feature-branch
+      GITHUB_BASE_REF: main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Verify action.yml exists and has required inputs
+        run: |
+          ACTION_FILE="$GITHUB_WORKSPACE/action.yml"
+          echo "Checking action.yml at: $ACTION_FILE"
+          if [ ! -f "$ACTION_FILE" ]; then
+            echo "FAIL: action.yml not found"
+            exit 1
+          fi
+          echo "PASS: action.yml found"
+
+      - name: Verify action declares api-key input
+        run: |
+          if ! grep -q "api-key:" "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: action.yml does not declare 'api-key' input"
+            exit 1
+          fi
+          echo "PASS: api-key input declared"
+
+      - name: Verify action declares path input
+        run: |
+          if ! grep -q "path:" "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: action.yml does not declare 'path' input"
+            exit 1
+          fi
+          echo "PASS: path input declared"
+
+      - name: Verify action declares behavior input with default
+        run: |
+          if ! grep -q "behavior:" "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: action.yml does not declare 'behavior' input"
+            exit 1
+          fi
+          if ! grep -q "default: update" "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: behavior input does not have default value 'update'"
+            exit 1
+          fi
+          echo "PASS: behavior input declared with default 'update'"
+
+      - name: Verify action uses composite runner
+        run: |
+          if ! grep -q 'using: "composite"' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: action does not use composite runner"
+            exit 1
+          fi
+          echo "PASS: action uses composite runner"
+
+      - name: Verify action has infracost branding
+        run: |
+          if ! grep -q "author: infracost" "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: action does not have infracost author"
+            exit 1
+          fi
+          echo "PASS: action has infracost author"
+
+      # Invoke the action under test (required by lint); it will fail without
+      # real credentials, so we allow failure and only assert on structure above.
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: dummy-key-for-basic-test
+          path: .
+          behavior: update

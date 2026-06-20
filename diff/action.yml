@@ -1,0 +1,244 @@
+name: "Infracost Scan"
+description: "Scan infrastructure code for cost changes, post a PR comment, and manage PR status in the Infracost dashboard."
+
+inputs:
+  api-key:
+    description: "Infracost API key for authentication."
+    required: true
+  base-path:
+    description: "Path to the base branch checkout. Required for scanning (not needed when only updating PR status)."
+    required: false
+  head-path:
+    description: "Path to the head (PR) branch checkout. Required for scanning (not needed when only updating PR status)."
+    required: false
+  version:
+    description: "Version of the scanner to use (e.g. 0.1.0). Defaults to latest."
+    required: false
+    default: "latest"
+  project:
+    description: "Filter scanning to a single project."
+    required: false
+  pr-status:
+    description: "Explicitly set the PR status (OPEN, MERGED, CLOSED). If not set, derived automatically from the GitHub event context."
+    required: false
+  github-token:
+    description: "GitHub API token for posting PR comments."
+    required: false
+    default: ${{ github.token }}
+  github-owner:
+    description: "GitHub repository owner. Defaults to the current repository owner."
+    required: false
+  github-repo:
+    description: "GitHub repository name. Defaults to the current repository name."
+    required: false
+  pr-number:
+    description: "Pull request number to comment on. Defaults to the current PR."
+    required: false
+  repo-url:
+    description: "Repository URL for source links in comments."
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Determine version
+      id: version
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [ "$VERSION" = "latest" ]; then
+          RELEASE=$(gh release list --repo "infracost/actions" --limit 50 --json tagName --jq '[.[] | select(.tagName | startswith("scanner/v"))][0].tagName')
+          if [ -z "$RELEASE" ]; then
+            echo "::error::No scanner release found"
+            exit 1
+          fi
+          VERSION="${RELEASE#scanner/v}"
+        fi
+        safe_version=$(printf '%s' "$VERSION" | tr -d '\n\r')
+        echo "version=${safe_version}" >> $GITHUB_OUTPUT
+        echo "tag=scanner/v${safe_version}" >> $GITHUB_OUTPUT
+
+    - name: Download scanner
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ steps.version.outputs.tag }}
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        case "$ARCH" in
+          x86_64) ARCH="amd64" ;;
+          aarch64|arm64) ARCH="arm64" ;;
+        esac
+
+        ARCHIVE="infracost-scanner_${VERSION}_${OS}_${ARCH}.tar.gz"
+        DEST="${RUNNER_TEMP}/infracost-scanner"
+
+        gh release download "$TAG" \
+          --repo "infracost/actions" \
+          --pattern "$ARCHIVE" \
+          --dir "$RUNNER_TEMP"
+
+        mkdir -p "$(dirname "$DEST")"
+        tar -xzf "${RUNNER_TEMP}/${ARCHIVE}" -C "$RUNNER_TEMP"
+        chmod +x "$DEST"
+        echo "${RUNNER_TEMP}" >> $GITHUB_PATH
+
+    - name: Derive context
+      id: context
+      shell: bash
+      env:
+        INPUT_GITHUB_OWNER: ${{ inputs.github-owner }}
+        INPUT_GITHUB_REPO: ${{ inputs.github-repo }}
+        INPUT_PR_NUMBER: ${{ inputs.pr-number }}
+        INPUT_REPO_URL: ${{ inputs.repo-url }}
+        INPUT_PR_STATUS: ${{ inputs.pr-status }}
+        INPUT_BASE_PATH: ${{ inputs.base-path }}
+        INPUT_HEAD_PATH: ${{ inputs.head-path }}
+        EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+        EVENT_PR_TITLE: ${{ github.event.pull_request.title }}
+        EVENT_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        EVENT_PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        EVENT_NAME: ${{ github.event_name }}
+        EVENT_ACTION: ${{ github.event.action }}
+        EVENT_PR_MERGED: ${{ github.event.pull_request.merged }}
+      run: |
+        OWNER="$INPUT_GITHUB_OWNER"
+        REPO="$INPUT_GITHUB_REPO"
+        PR="$INPUT_PR_NUMBER"
+        REPO_URL="$INPUT_REPO_URL"
+        PR_STATUS="$INPUT_PR_STATUS"
+
+        if [ -z "$OWNER" ] || [ -z "$REPO" ]; then
+          OWNER="${GITHUB_REPOSITORY_OWNER}"
+          REPO="${GITHUB_REPOSITORY#*/}"
+        fi
+
+        if [ -z "$PR" ]; then
+          PR="$EVENT_PR_NUMBER"
+        fi
+
+        if [ -z "$PR" ] || [ "$PR" = "0" ]; then
+          echo "::error::Could not determine PR number. Either run on a pull_request event or set the pr-number input."
+          exit 1
+        fi
+
+        if [ -z "$REPO_URL" ]; then
+          REPO_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+        fi
+
+        PR_TITLE="$EVENT_PR_TITLE"
+        PR_AUTHOR="$EVENT_PR_AUTHOR"
+        PR_LABELS=$(printf '%s' "$EVENT_PR_LABELS" | jq -r 'join(",")')
+        PIPELINE_RUN_ID="${GITHUB_RUN_ID}"
+
+        # Determine the action mode and PR status from the event context
+        # if not explicitly provided.
+        MODE="scan"
+        if [ -z "$PR_STATUS" ]; then
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            case "$EVENT_ACTION" in
+              closed)
+                MODE="status-only"
+                if [ "$EVENT_PR_MERGED" = "true" ]; then
+                  PR_STATUS="MERGED"
+                else
+                  PR_STATUS="CLOSED"
+                fi
+                ;;
+              *)
+                PR_STATUS="OPEN"
+                ;;
+            esac
+          fi
+        else
+          # User provided an explicit status. If base-path and head-path
+          # are not set, skip scanning and only update the status.
+          if [ -z "$INPUT_BASE_PATH" ] || [ -z "$INPUT_HEAD_PATH" ]; then
+            MODE="status-only"
+          fi
+        fi
+
+        safe_owner=$(printf '%s' "$OWNER" | tr -d '\n\r')
+        safe_repo=$(printf '%s' "$REPO" | tr -d '\n\r')
+        safe_pr=$(printf '%s' "$PR" | tr -d '\n\r')
+        safe_repo_url=$(printf '%s' "$REPO_URL" | tr -d '\n\r')
+        safe_pr_title=$(printf '%s' "$PR_TITLE" | tr -d '\n\r')
+        safe_pr_author=$(printf '%s' "$PR_AUTHOR" | tr -d '\n\r')
+        safe_pr_labels=$(printf '%s' "$PR_LABELS" | tr -d '\n\r')
+        safe_pipeline_run_id=$(printf '%s' "$PIPELINE_RUN_ID" | tr -d '\n\r')
+        safe_mode=$(printf '%s' "$MODE" | tr -d '\n\r')
+        safe_pr_status=$(printf '%s' "$PR_STATUS" | tr -d '\n\r')
+
+        echo "owner=${safe_owner}" >> $GITHUB_OUTPUT
+        echo "repo=${safe_repo}" >> $GITHUB_OUTPUT
+        echo "pr=${safe_pr}" >> $GITHUB_OUTPUT
+        echo "repo-url=${safe_repo_url}" >> $GITHUB_OUTPUT
+        echo "pr-title=${safe_pr_title}" >> $GITHUB_OUTPUT
+        echo "pr-author=${safe_pr_author}" >> $GITHUB_OUTPUT
+        echo "pr-labels=${safe_pr_labels}" >> $GITHUB_OUTPUT
+        echo "pipeline-run-id=${safe_pipeline_run_id}" >> $GITHUB_OUTPUT
+        echo "mode=${safe_mode}" >> $GITHUB_OUTPUT
+        echo "pr-status=${safe_pr_status}" >> $GITHUB_OUTPUT
+
+    - name: Run scanner
+      if: steps.context.outputs.mode == 'scan'
+      shell: bash
+      env:
+        INFRACOST_CLI_AUTHENTICATION_TOKEN: ${{ inputs.api-key }}
+        INFRACOST_CLI_LOG_LEVEL: info
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_BASE_PATH: ${{ inputs.base-path }}
+        INPUT_HEAD_PATH: ${{ inputs.head-path }}
+        INPUT_PROJECT: ${{ inputs.project }}
+        CTX_OWNER: ${{ steps.context.outputs.owner }}
+        CTX_REPO: ${{ steps.context.outputs.repo }}
+        CTX_PR: ${{ steps.context.outputs.pr }}
+        CTX_REPO_URL: ${{ steps.context.outputs.repo-url }}
+        CTX_PR_TITLE: ${{ steps.context.outputs.pr-title }}
+        CTX_PR_AUTHOR: ${{ steps.context.outputs.pr-author }}
+        CTX_PR_LABELS: ${{ steps.context.outputs.pr-labels }}
+        CTX_PIPELINE_RUN_ID: ${{ steps.context.outputs.pipeline-run-id }}
+      run: |
+        if [ -z "$INPUT_BASE_PATH" ] || [ -z "$INPUT_HEAD_PATH" ]; then
+          echo "::error::base-path and head-path are required for scanning."
+          exit 1
+        fi
+
+        ARGS=(
+          diff
+          --base-path "$INPUT_BASE_PATH"
+          --head-path "$INPUT_HEAD_PATH"
+          --github-owner "$CTX_OWNER"
+          --github-repo "$CTX_REPO"
+          --pr-number "$CTX_PR"
+          --repo-url "$CTX_REPO_URL"
+          --pr-title "$CTX_PR_TITLE"
+          --pr-author "$CTX_PR_AUTHOR"
+          --pr-labels "$CTX_PR_LABELS"
+          --pipeline-run-id "$CTX_PIPELINE_RUN_ID"
+        )
+
+        if [ -n "$INPUT_PROJECT" ]; then
+          ARGS+=(--project "$INPUT_PROJECT")
+        fi
+
+        infracost-scanner "${ARGS[@]}"
+
+    - name: Update PR status
+      if: steps.context.outputs.pr-status != ''
+      shell: bash
+      env:
+        INFRACOST_CLI_AUTHENTICATION_TOKEN: ${{ inputs.api-key }}
+        INFRACOST_CLI_LOG_LEVEL: info
+        CTX_REPO_URL: ${{ steps.context.outputs.repo-url }}
+        CTX_PR: ${{ steps.context.outputs.pr }}
+        CTX_PR_STATUS: ${{ steps.context.outputs.pr-status }}
+      run: |
+        infracost-scanner status \
+          --repo-url "$CTX_REPO_URL" \
+          --pr-number "$CTX_PR" \
+          --status "$CTX_PR_STATUS"

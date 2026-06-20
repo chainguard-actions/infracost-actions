@@ -1,0 +1,27 @@
+name: "Setup Infracost"
+description: Sets up Infracost CLI in your GitHub Actions workflow. Show cloud cost estimates for Terraform in pull requests.
+inputs:
+  api-key:
+    description: Your Infracost API key. It can be retrieved by running `infracost configure get api_key`. We recommend using your same API key in all environments. If you don't have one, download Infracost (https://www.infracost.io/docs/#quick-start) and run `infracost auth login` to get a free API key.
+    required: true
+  version:
+    description: Version of Infracost CLI to install. SemVer ranges (https://www.npmjs.com/package/semver#ranges) are supported.
+    required: false
+    default: 0.10.x
+  currency:
+    description: Convert output from USD to your preferred ISO 4217 currency (https://en.wikipedia.org/wiki/ISO_4217#Active_codes), e.g. EUR, BRL or INR.
+    required: false
+    default: USD
+  pricing-api-endpoint:
+    description: For self-hosted (https://www.infracost.io/docs/cloud_pricing_api/self_hosted) users, endpoint of the Cloud Pricing API, e.g. https://cloud-pricing-api.
+    required: false
+  enable-dashboard:
+    description: Enables [Infracost dashboard features](https://www.infracost.io/docs/features/share_links), not supported for self-hosted Cloud Pricing API. Available options are true and false, defaults to false.
+    required: false
+  github-token:
+    description: 'The GitHub access token (e.g. secrets.GITHUB_TOKEN) used to get the list of Infracost CLI versions. This defaults to {{ github.token }}.'
+    default: '${{ github.token }}'
+    required: false
+runs:
+  using: node24
+  main: dist/index.js
