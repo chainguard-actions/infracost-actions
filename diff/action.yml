@@ -53,10 +53,12 @@ runs:
           local value="$2"
           local delimiter
           delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
+          local safe_value
+          safe_value=$(printf '%s' "$value" | tr -d '\n\r')
 
           {
             printf '%s<<%s\n' "$name" "$delimiter"
-            printf '%s\n' "$value"
+            printf '%s\n' "$safe_value"
             printf '%s\n' "$delimiter"
           } >> "$GITHUB_OUTPUT"
         }
@@ -125,10 +127,12 @@ runs:
           local value="$2"
           local delimiter
           delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
+          local safe_value
+          safe_value=$(printf '%s' "$value" | tr -d '\n\r')
 
           {
             printf '%s<<%s\n' "$name" "$delimiter"
-            printf '%s\n' "$value"
+            printf '%s\n' "$safe_value"
             printf '%s\n' "$delimiter"
           } >> "$GITHUB_OUTPUT"
         }
