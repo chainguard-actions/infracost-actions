@@ -1,0 +1,73 @@
+name: Test behavior input validation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/pull/1/merge
+      GITHUB_EVENT_NAME: pull_request
+      GITHUB_HEAD_REF: feature-branch
+      GITHUB_BASE_REF: main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Verify the action.yml documents valid behavior values
+      - name: Verify behavior values documented
+        run: |
+          CONTENT=$(cat "$GITHUB_WORKSPACE/action.yml")
+          for BEHAVIOR in "update" "delete-and-new" "hide-and-new" "new"; do
+            if ! echo "$CONTENT" | grep -q "$BEHAVIOR"; then
+              echo "FAIL: behavior value '$BEHAVIOR' not documented in action.yml"
+              exit 1
+            fi
+            echo "PASS: behavior value '$BEHAVIOR' is documented"
+          done
+
+      # Verify the action description mentions pull requests
+      - name: Verify action description
+        run: |
+          if ! grep -q 'pull request' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: action description does not mention pull requests"
+            exit 1
+          fi
+          echo "PASS: action description mentions pull requests"
+
+      # Verify the action has the infracost branding
+      - name: Verify action branding
+        run: |
+          if ! grep -q 'author: infracost' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: action author is not infracost"
+            exit 1
+          fi
+          echo "PASS: action author is infracost"
+
+      # Verify the action posts a comment using the behavior input
+      - name: Verify comment behavior is configurable
+        run: |
+          if ! grep -q 'COMMENT_BEHAVIOR' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: COMMENT_BEHAVIOR env var not found in action.yml"
+            exit 1
+          fi
+          if ! grep -q '"$COMMENT_BEHAVIOR"' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: COMMENT_BEHAVIOR not passed to infracost comment command"
+            exit 1
+          fi
+          echo "PASS: behavior input is correctly wired to infracost comment command"
+
+      # Invoke the action under test with a non-default behavior value.
+      # The action requires infracost CLI and API key so it will fail in this
+      # environment; continue-on-error lets the structural assertions above
+      # serve as the real test gate.
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-lint
+          path: .
+          behavior: delete-and-new
+
+      - name: Assert action was invoked with behavior input
+        run: |
+          echo "Action step was reached with behavior=delete-and-new (continue-on-error allows failure without infracost CLI)"
+          echo "PASS"

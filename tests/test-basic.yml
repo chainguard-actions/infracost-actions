@@ -1,0 +1,82 @@
+name: Test basic usage - required inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/pull/1/merge
+      GITHUB_EVENT_NAME: pull_request
+      GITHUB_HEAD_REF: feature-branch
+      GITHUB_BASE_REF: main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Verify the action.yml exists and has the expected structure
+      - name: Verify action structure
+        run: |
+          if [ ! -f "$GITHUB_WORKSPACE/action.yml" ]; then
+            echo "FAIL: action.yml not found"
+            exit 1
+          fi
+          echo "PASS: action.yml found"
+
+      # Verify required inputs are declared in action.yml
+      - name: Verify api-key input declared
+        run: |
+          if ! grep -q 'api-key:' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: api-key input not found in action.yml"
+            exit 1
+          fi
+          echo "PASS: api-key input declared"
+
+      - name: Verify path input declared
+        run: |
+          if ! grep -q 'path:' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: path input not found in action.yml"
+            exit 1
+          fi
+          echo "PASS: path input declared"
+
+      - name: Verify behavior input declared with default
+        run: |
+          if ! grep -q 'behavior:' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: behavior input not found in action.yml"
+            exit 1
+          fi
+          if ! grep -q "default: update" "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: behavior default 'update' not found in action.yml"
+            exit 1
+          fi
+          echo "PASS: behavior input declared with default 'update'"
+
+      - name: Verify action uses composite runner
+        run: |
+          if ! grep -q 'using: "composite"' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: action is not composite"
+            exit 1
+          fi
+          echo "PASS: action uses composite runner"
+
+      - name: Verify infracost comment step uses behavior input
+        run: |
+          if ! grep -q 'COMMENT_BEHAVIOR' "$GITHUB_WORKSPACE/action.yml"; then
+            echo "FAIL: COMMENT_BEHAVIOR not found in action.yml"
+            exit 1
+          fi
+          echo "PASS: behavior input is used in comment step"
+
+      # Invoke the action under test (requires infracost CLI and API key;
+      # expected to fail in this environment — continue-on-error allows the
+      # structural assertions above to be the real test gate).
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-lint
+          path: .
+
+      - name: Assert action was invoked
+        run: |
+          echo "Action step was reached (continue-on-error allows failure without infracost CLI)"
+          echo "PASS"

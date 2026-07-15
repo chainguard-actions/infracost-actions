@@ -1,0 +1,85 @@
+name: Test Setup
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "setup/**"
+  pull_request:
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+        version: ["<0.9.11", "0.9.12", "0.10.x", "latest"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup infracost
+        uses: ./setup
+        with:
+          version: ${{ matrix.version }}
+          api-key: abcdefg123456
+          currency: GBP
+          pricing-api-endpoint: https://test.test
+
+      - name: Get expected version
+        env:
+          MATRIX_VERSION: ${{ matrix.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$MATRIX_VERSION" = "<0.9.11" ]; then
+            export INFRACOST_EXPECTED_VERSION=v0.9.10
+          elif [ "$MATRIX_VERSION" = "0.9.12" ]; then
+            export INFRACOST_EXPECTED_VERSION=v0.9.12
+          else
+            export INFRACOST_EXPECTED_VERSION=$(curl --header "authorization: Bearer $GH_TOKEN" https://api.github.com/repos/infracost/infracost/releases/latest | jq -r .name )
+          fi
+          echo "Expected version for $MATRIX_VERSION: $INFRACOST_EXPECTED_VERSION"
+          echo "INFRACOST_EXPECTED_VERSION=Infracost $INFRACOST_EXPECTED_VERSION" >> "$GITHUB_ENV"
+      - name: Capture infracost version installed
+        run: |
+          echo "INFRACOST_VERSION_INSTALLED=$( infracost --version )" >> $GITHUB_ENV
+      - name: Capture infracost configure settings
+        run : |
+          echo "CONFIGURED_API_KEY=$( infracost configure get api_key )" >> $GITHUB_ENV
+          echo "CONFIGURED_CURRENCY=$( infracost configure get currency )" >> $GITHUB_ENV
+          echo "CONFIGURED_PRICING_API_ENDPOINT=$( infracost configure get pricing_api_endpoint )" >> $GITHUB_ENV
+      - name: Verify
+        shell: bash
+        run: |
+          if [ "$INFRACOST_EXPECTED_VERSION" != "$INFRACOST_VERSION_INSTALLED" ]; then
+            echo "Unexpected version, expected $INFRACOST_LATEST_VERSION, got: $INFRACOST_VERSION_INSTALLED"
+            exit 1;
+          fi
+          if [ "abcdefg123456" != "$CONFIGURED_API_KEY" ]; then
+            echo "Unexpected api-key, got: $CONFIGURED_API_KEY"
+            exit 1;
+          fi
+          if [ "GBP" != "$CONFIGURED_CURRENCY" ]; then
+            echo "Unexpected currency, got: $CONFIGURED_CURRENCY"
+            exit 1;
+          fi
+          if [ "https://test.test" != "$CONFIGURED_PRICING_API_ENDPOINT" ]; then
+            echo "Unexpected pricing-api-endpoint, got: $CONFIGURED_PRICING_API_ENDPOINT"
+            exit 1;
+          fi
+          if [ "$INFRACOST_GITHUB_ACTION" != "true" ]; then
+            echo "Unexpected INFRACOST_GITHUB_ACTION, got: $INFRACOST_GITHUB_ACTION"
+            exit 1;
+          fi
+          exit 0;
+
