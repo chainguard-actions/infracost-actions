@@ -18,8 +18,6 @@ jobs:
   test:
     name: Test
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
@@ -32,7 +30,7 @@ jobs:
         uses: ./setup
         with:
           version: ${{ matrix.version }}
-          api-key: abcdefg123456
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
           currency: GBP
           pricing-api-endpoint: https://test.test
 
@@ -60,12 +58,14 @@ jobs:
           echo "CONFIGURED_PRICING_API_ENDPOINT=$( infracost configure get pricing_api_endpoint )" >> $GITHUB_ENV
       - name: Verify
         shell: bash
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
         run: |
           if [ "$INFRACOST_EXPECTED_VERSION" != "$INFRACOST_VERSION_INSTALLED" ]; then
             echo "Unexpected version, expected $INFRACOST_LATEST_VERSION, got: $INFRACOST_VERSION_INSTALLED"
             exit 1;
           fi
-          if [ "abcdefg123456" != "$CONFIGURED_API_KEY" ]; then
+          if [ "$INFRACOST_API_KEY" != "$CONFIGURED_API_KEY" ]; then
             echo "Unexpected api-key, got: $CONFIGURED_API_KEY"
             exit 1;
           fi
