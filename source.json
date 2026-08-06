@@ -1,8 +1,8 @@
 {
   "owner": "infracost",
   "repo": "actions",
-  "version": "scanner/v0.2.4",
-  "commit_sha": "dea2af0ed4afa70b5518fb4164733c387b4b64a5",
+  "version": "scanner/v0.2.3",
+  "commit_sha": "c2e668fda0716ccc96353c6e6438c4a20448821a",
   "url": "https://github.com/infracost/actions",
   "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
   "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
