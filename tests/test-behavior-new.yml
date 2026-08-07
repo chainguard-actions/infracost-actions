@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test behavior new
 on:
   workflow_dispatch:
 jobs:
@@ -13,9 +13,9 @@ jobs:
         with:
           api-key: fake-api-key-for-testing
           path: .
-          behavior: update
+          behavior: new
 
-      - name: Assert action ran (fails gracefully without real API key and PR)
+      - name: Assert action ran with behavior=new (fails gracefully without real API key and PR)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
