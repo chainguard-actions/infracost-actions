@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test default behavior
 on:
   workflow_dispatch:
 jobs:
@@ -7,15 +7,16 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - id: action
+      - name: Test with default behavior (no behavior input)
+        id: action
         uses: .
         continue-on-error: true
         with:
           api-key: fake-api-key-for-testing
           path: .
-          behavior: update
+          # behavior is not specified — should default to 'update'
 
-      - name: Assert action ran and failed gracefully
+      - name: Assert action ran with default behavior
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
@@ -24,12 +25,12 @@ jobs:
           # 1. The checkout of pull_request.base.ref fails (no PR context under workflow_dispatch)
           # 2. infracost CLI is not installed
           # 3. GITHUB_REPOSITORY is a sentinel (not a real repo)
-          # We accept either failure (expected) or success (unlikely but valid).
+          # We verify the action at least attempted to run (outcome is not skipped/cancelled).
           if [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully as expected (no PR context / infracost not installed)"
           elif [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded unexpectedly"
+            echo "PASS: action succeeded"
           else
-            echo "FAIL: unexpected outcome '$OUTCOME'"
+            echo "FAIL: unexpected outcome '$OUTCOME' (expected failure or success, not '$OUTCOME')"
             exit 1
           fi
