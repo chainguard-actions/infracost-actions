@@ -8,7 +8,8 @@ on:
       - "setup/**"
   pull_request:
 
-permissions: {}
+permissions:
+  contents: read
 
 defaults:
   run:
@@ -30,7 +31,7 @@ jobs:
         uses: ./setup
         with:
           version: ${{ matrix.version }}
-          api-key: ${{ secrets.INFRACOST_TEST_API_KEY }}
+          api-key: abcdefg123456
           currency: GBP
           pricing-api-endpoint: https://test.test
 

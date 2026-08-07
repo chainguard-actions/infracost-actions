@@ -1,6 +1,6 @@
 <!-- markdownlint-disable -->
 
-# Hardening Report: infracost--actions/scanner/v0.2.8
+# Hardening Report: infracost--actions/scanner/v0.2.6
 
 > This file was generated automatically by the hardening agent.
 
@@ -10,85 +10,113 @@
 
 **Harden Agent Version:** `2`
 
-Action **infracost--actions/scanner/v0.2.8** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
+Action **infracost--actions/scanner/v0.2.6** was hardened automatically. 10 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### unpinned-uses (severity: high)
 
-Multiple `uses:` references across action.yml and workflow files are pinned to mutable version tags rather than immutable 40-character SHA commit hashes, making them vulnerable to supply-chain attacks.
-
-action.yml: `uses: actions/checkout@v4` (×2), `uses: infracost/actions/setup@v3`
-.github/workflows/codeql-analysis.yml: `uses: actions/checkout@v4`, `uses: github/codeql-action/init@v3`, `uses: github/codeql-action/analyze@v3`
-.github/workflows/examples_test.yml: `uses: actions/checkout@v4` (×3)
-.github/workflows/scanner_release.yml: `uses: actions/checkout@v4`, `uses: actions/setup-go@v6`
-.github/workflows/scanner_test.yml: `uses: actions/checkout@v4` (×4), `uses: actions/setup-go@v6` (×4), `uses: actions/cache@v4`, `uses: golangci/golangci-lint-action@v9`
-.github/workflows/setup_test.yml: `uses: actions/checkout@v4`
-.github/workflows/verify_dist.yml: `uses: actions/checkout@v4`
+action.yml references actions using mutable tags instead of pinned full-length SHA commits: `actions/checkout@v4` (lines ~24 and ~48) and `infracost/actions/setup@v3` (line ~31). These can be silently updated to point to malicious code.
 
 Locations:
 
 - `action.yml:24`
-- `action.yml:29`
-- `action.yml:46`
-- `.github/workflows/codeql-analysis.yml:18`
-- `.github/workflows/codeql-analysis.yml:21`
-- `.github/workflows/codeql-analysis.yml:26`
-- `.github/workflows/examples_test.yml:16`
-- `.github/workflows/examples_test.yml:21`
-- `.github/workflows/examples_test.yml:30`
-- `.github/workflows/scanner_release.yml:82`
-- `.github/workflows/scanner_release.yml:84`
-- `.github/workflows/scanner_test.yml:18`
-- `.github/workflows/scanner_test.yml:20`
-- `.github/workflows/scanner_test.yml:30`
-- `.github/workflows/scanner_test.yml:32`
-- `.github/workflows/scanner_test.yml:36`
-- `.github/workflows/scanner_test.yml:46`
-- `.github/workflows/scanner_test.yml:48`
-- `.github/workflows/scanner_test.yml:54`
-- `.github/workflows/scanner_test.yml:62`
-- `.github/workflows/scanner_test.yml:64`
-- `.github/workflows/setup_test.yml:25`
-- `.github/workflows/verify_dist.yml:19`
+- `action.yml:31`
+- `action.yml:48`
 
-### hardcoded-credentials (severity: high)
+### unpinned-uses (severity: high)
 
-A literal hardcoded API key value `abcdefg123456` is assigned to `api-key:` in the setup_test.yml workflow. This is a non-expression literal value (not a `${{ secrets.* }}` reference) assigned to a name containing 'key'. Even if used for testing purposes, hardcoded credentials in workflow files are a security risk as they are committed to the repository.
+codeql-analysis.yml references actions using mutable tags instead of pinned full-length SHA commits: `actions/checkout@v4`, `github/codeql-action/init@v3`, `github/codeql-action/analyze@v3`.
 
 Locations:
 
-- `.github/workflows/setup_test.yml:31`
+- `.github/workflows/codeql-analysis.yml:18`
+- `.github/workflows/codeql-analysis.yml:21`
+- `.github/workflows/codeql-analysis.yml:25`
+
+### unpinned-uses (severity: high)
+
+examples_test.yml references actions using mutable tags instead of pinned full-length SHA commits: `actions/checkout@v4` (multiple occurrences).
+
+Locations:
+
+- `.github/workflows/examples_test.yml:14`
+- `.github/workflows/examples_test.yml:19`
+- `.github/workflows/examples_test.yml:23`
+
+### unpinned-uses (severity: high)
+
+scanner_release.yml references actions using mutable tags instead of pinned full-length SHA commits: `actions/checkout@v4` and `actions/setup-go@v6`.
+
+Locations:
+
+- `.github/workflows/scanner_release.yml:68`
+- `.github/workflows/scanner_release.yml:70`
+
+### unpinned-uses (severity: high)
+
+scanner_test.yml references actions using mutable tags instead of pinned full-length SHA commits: `actions/checkout@v4`, `actions/setup-go@v6`, `actions/cache@v4`, and `golangci/golangci-lint-action@v9`.
+
+Locations:
+
+- `.github/workflows/scanner_test.yml:17`
+- `.github/workflows/scanner_test.yml:19`
+- `.github/workflows/scanner_test.yml:29`
+- `.github/workflows/scanner_test.yml:31`
+- `.github/workflows/scanner_test.yml:35`
+- `.github/workflows/scanner_test.yml:43`
+- `.github/workflows/scanner_test.yml:45`
+- `.github/workflows/scanner_test.yml:52`
+- `.github/workflows/scanner_test.yml:54`
+- `.github/workflows/scanner_test.yml:58`
+
+### unpinned-uses (severity: high)
+
+setup_test.yml references actions using mutable tags instead of pinned full-length SHA commits: `actions/checkout@v4`.
+
+Locations:
+
+- `.github/workflows/setup_test.yml:21`
+
+### unpinned-uses (severity: high)
+
+verify_dist.yml references actions using mutable tags instead of pinned full-length SHA commits: `actions/checkout@v4`.
+
+Locations:
+
+- `.github/workflows/verify_dist.yml:18`
 
 ### missing-permissions (severity: medium)
 
-The following workflow files have no top-level `permissions:` key and no job-level `permissions:` key on any of their jobs. Without explicit permissions, workflows inherit the default repository permissions (which may be broad), violating the principle of least privilege.
-
-- scanner_test.yml: jobs `test`, `integration`, `lint`, `mocks` — none have permissions defined
-- setup_test.yml: job `test` — no permissions defined
-- verify_dist.yml: job `verify-dist` — no permissions defined
+scanner_test.yml has no top-level `permissions:` key and none of its jobs (test, integration, lint, mocks) define job-level permissions. This means the workflow runs with the default, potentially over-broad GITHUB_TOKEN permissions.
 
 Locations:
 
 - `.github/workflows/scanner_test.yml:1`
+
+### missing-permissions (severity: medium)
+
+setup_test.yml has no top-level `permissions:` key and its only job (`test`) defines no job-level permissions. This means the workflow runs with the default, potentially over-broad GITHUB_TOKEN permissions.
+
+Locations:
+
 - `.github/workflows/setup_test.yml:1`
+
+### missing-permissions (severity: medium)
+
+verify_dist.yml has no top-level `permissions:` key and its only job (`verify-dist`) defines no job-level permissions. This means the workflow runs with the default, potentially over-broad GITHUB_TOKEN permissions.
+
+Locations:
+
 - `.github/workflows/verify_dist.yml:1`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unpinned-uses, hardcoded-credentials, missing-permissions
+**Fixes applied:** unpinned-uses, missing-permissions
 
 **Notes:**
 
-Fixed all findings:
-
-1. **unpinned-uses**: Pinned all `uses:` references to full 40-char SHAs in action.yml, codeql-analysis.yml, examples_test.yml, scanner_release.yml, scanner_test.yml, setup_test.yml, and verify_dist.yml. All tags preserved as inline comments.
-
-2. **hardcoded-credentials**: Replaced `api-key: abcdefg123456` in setup_test.yml with `api-key: ${{ secrets.INFRACOST_TEST_API_KEY }}`.
-
-3. **missing-permissions**: Added `permissions: {}` top-level blocks to scanner_test.yml, setup_test.yml, and verify_dist.yml.
-
-Remaining `@v` references in README.md, CONTRIBUTING.md, diff/README.md, scan/README.md, setup/README.md, and testdata/ are documentation examples and test harness files — not part of the distributed action.
+Pinned all mutable action tags to full commit SHAs across 7 files: action.yml (actions/checkout@v4 ×2, infracost/actions/setup@v3), codeql-analysis.yml (actions/checkout@v4, github/codeql-action/init@v3, github/codeql-action/analyze@v3), examples_test.yml (actions/checkout@v4 ×3), scanner_release.yml (actions/checkout@v4, actions/setup-go@v6), scanner_test.yml (actions/checkout@v4 ×4, actions/setup-go@v6 ×4, actions/cache@v4, golangci/golangci-lint-action@v9), setup_test.yml (actions/checkout@v4), verify_dist.yml (actions/checkout@v4). Added top-level `permissions: contents: read` to scanner_test.yml, setup_test.yml, and verify_dist.yml.
 
