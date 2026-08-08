@@ -7,28 +7,28 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      # The action requires an api-key and path. Under the act harness:
+      # - github.event.pull_request.base.ref is empty (workflow_dispatch, not pull_request)
+      # - The Infracost CLI install may fail without a valid API key
+      # - The PR comment step will fail (no PR number, sentinel repo)
+      # We assert that the action either fails gracefully or succeeds.
       - id: action
         uses: .
         continue-on-error: true
         with:
-          api-key: fake-api-key-for-testing
-          path: .
+          api-key: "fake-api-key-for-testing"
+          path: "."
           behavior: update
 
-      - name: Assert action ran and failed gracefully
+      - name: Assert action ran (failed gracefully due to missing PR context or invalid API key)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action is expected to fail under the harness because:
-          # 1. The checkout of pull_request.base.ref fails (no PR context under workflow_dispatch)
-          # 2. infracost CLI is not installed
-          # 3. GITHUB_REPOSITORY is a sentinel (not a real repo)
-          # We accept either failure (expected) or success (unlikely but valid).
           if [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully as expected (no PR context / infracost not installed)"
+            echo "PASS: action failed gracefully as expected (no PR context / invalid API key under harness)"
           elif [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded unexpectedly"
+            echo "PASS: action succeeded unexpectedly (acceptable)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
