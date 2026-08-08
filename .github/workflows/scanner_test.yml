@@ -9,8 +9,7 @@ on:
     paths:
       - tools/scanner/**
 
-permissions:
-  contents: read
+permissions: {}
 
 defaults:
   run:
