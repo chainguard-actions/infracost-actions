@@ -36,10 +36,10 @@ runs:
         write_output() {
           local name="$1"
           local value="$2"
-          local delimiter
-          delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
           local safe_value
           safe_value=$(printf '%s' "$value" | tr -d '\n\r')
+          local delimiter
+          delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
 
           {
             printf '%s<<%s\n' "$name" "$delimiter"
@@ -95,10 +95,10 @@ runs:
         write_output() {
           local name="$1"
           local value="$2"
-          local delimiter
-          delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
           local safe_value
           safe_value=$(printf '%s' "$value" | tr -d '\n\r')
+          local delimiter
+          delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
 
           {
             printf '%s<<%s\n' "$name" "$delimiter"
