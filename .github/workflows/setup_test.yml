@@ -8,7 +8,8 @@ on:
       - "setup/**"
   pull_request:
 
-permissions: {}
+permissions:
+  contents: read
 
 defaults:
   run:
@@ -18,15 +19,13 @@ jobs:
   test:
     name: Test
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
         version: ["<0.9.11", "0.9.12", "0.10.x", "latest"]
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup infracost
         uses: ./setup
