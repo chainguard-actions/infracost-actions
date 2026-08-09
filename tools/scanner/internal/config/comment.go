@@ -142,6 +142,7 @@ func BuildCommentData(opts CommentDataOptions) comment.Data {
 		TotalMonthlyCost:                totalMonthlyCost,
 		PastTotalMonthlyCost:            pastTotalMonthlyCost,
 		DiffTotalMonthlyCarbonGramsCo2e: diffCarbon,
+		CloudURL:                        "", // TODO: We need to implement addRun first.
 		RepoURL:                         opts.RepoURL,
 		CommitSHA:                       opts.CommitSHA,
 		Summary:                         summary,
