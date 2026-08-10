@@ -1,6 +1,6 @@
 <!-- markdownlint-disable -->
 
-# Hardening Report: infracost--actions/scanner/v0.2.8
+# Hardening Report: infracost--actions/scanner/v0.2.7
 
 > This file was generated automatically by the hardening agent.
 
@@ -10,85 +10,54 @@
 
 **Harden Agent Version:** `2`
 
-Action **infracost--actions/scanner/v0.2.8** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
+Action **infracost--actions/scanner/v0.2.7** was hardened automatically. 1 finding(s) were identified and resolved across 3 iteration(s).
 
 ## Findings Fixed
 
 ### unpinned-uses (severity: high)
 
-Multiple `uses:` references across action.yml and workflow files are pinned to mutable version tags rather than immutable 40-character SHA commit hashes, making them vulnerable to supply-chain attacks.
-
-action.yml: `uses: actions/checkout@v4` (×2), `uses: infracost/actions/setup@v3`
-.github/workflows/codeql-analysis.yml: `uses: actions/checkout@v4`, `uses: github/codeql-action/init@v3`, `uses: github/codeql-action/analyze@v3`
-.github/workflows/examples_test.yml: `uses: actions/checkout@v4` (×3)
-.github/workflows/scanner_release.yml: `uses: actions/checkout@v4`, `uses: actions/setup-go@v6`
-.github/workflows/scanner_test.yml: `uses: actions/checkout@v4` (×4), `uses: actions/setup-go@v6` (×4), `uses: actions/cache@v4`, `uses: golangci/golangci-lint-action@v9`
-.github/workflows/setup_test.yml: `uses: actions/checkout@v4`
-.github/workflows/verify_dist.yml: `uses: actions/checkout@v4`
+The root action.yml uses mutable tag-based references instead of pinned full SHA commit hashes. This exposes the action to supply-chain attacks where a tag could be silently moved to point to malicious code. Failing references: `actions/checkout@v4` (line 25), `infracost/actions/setup@v3` (line 32), `actions/checkout@v4` (line 45). Each should be replaced with a full 40-character hex SHA, e.g. `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4`.
 
 Locations:
 
-- `action.yml:24`
-- `action.yml:29`
-- `action.yml:46`
-- `.github/workflows/codeql-analysis.yml:18`
-- `.github/workflows/codeql-analysis.yml:21`
-- `.github/workflows/codeql-analysis.yml:26`
-- `.github/workflows/examples_test.yml:16`
-- `.github/workflows/examples_test.yml:21`
-- `.github/workflows/examples_test.yml:30`
-- `.github/workflows/scanner_release.yml:82`
-- `.github/workflows/scanner_release.yml:84`
-- `.github/workflows/scanner_test.yml:18`
-- `.github/workflows/scanner_test.yml:20`
-- `.github/workflows/scanner_test.yml:30`
-- `.github/workflows/scanner_test.yml:32`
-- `.github/workflows/scanner_test.yml:36`
-- `.github/workflows/scanner_test.yml:46`
-- `.github/workflows/scanner_test.yml:48`
-- `.github/workflows/scanner_test.yml:54`
-- `.github/workflows/scanner_test.yml:62`
-- `.github/workflows/scanner_test.yml:64`
-- `.github/workflows/setup_test.yml:25`
-- `.github/workflows/verify_dist.yml:19`
-
-### hardcoded-credentials (severity: high)
-
-A literal hardcoded API key value `abcdefg123456` is assigned to `api-key:` in the setup_test.yml workflow. This is a non-expression literal value (not a `${{ secrets.* }}` reference) assigned to a name containing 'key'. Even if used for testing purposes, hardcoded credentials in workflow files are a security risk as they are committed to the repository.
-
-Locations:
-
-- `.github/workflows/setup_test.yml:31`
-
-### missing-permissions (severity: medium)
-
-The following workflow files have no top-level `permissions:` key and no job-level `permissions:` key on any of their jobs. Without explicit permissions, workflows inherit the default repository permissions (which may be broad), violating the principle of least privilege.
-
-- scanner_test.yml: jobs `test`, `integration`, `lint`, `mocks` — none have permissions defined
-- setup_test.yml: job `test` — no permissions defined
-- verify_dist.yml: job `verify-dist` — no permissions defined
-
-Locations:
-
-- `.github/workflows/scanner_test.yml:1`
-- `.github/workflows/setup_test.yml:1`
-- `.github/workflows/verify_dist.yml:1`
+- `action.yml:25`
+- `action.yml:32`
+- `action.yml:45`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unpinned-uses, hardcoded-credentials, missing-permissions
+**Fixes applied:** unpinned-uses
 
 **Notes:**
 
-Fixed all findings:
+Replaced all three mutable tag-based `uses:` references in hardened/action/action.yml with pinned full SHA commit hashes:
+- `actions/checkout@v4` (lines 25 and 45) → `actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4`
+- `infracost/actions/setup@v3` (line 32) → `infracost/actions/setup@e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3`
+Original tags are preserved as inline comments for readability.
 
-1. **unpinned-uses**: Pinned all `uses:` references to full 40-char SHAs in action.yml, codeql-analysis.yml, examples_test.yml, scanner_release.yml, scanner_test.yml, setup_test.yml, and verify_dist.yml. All tags preserved as inline comments.
+### Iteration 2
 
-2. **hardcoded-credentials**: Replaced `api-key: abcdefg123456` in setup_test.yml with `api-key: ${{ secrets.INFRACOST_TEST_API_KEY }}`.
+**Fixes applied:** github-env-injection
 
-3. **missing-permissions**: Added `permissions: {}` top-level blocks to scanner_test.yml, setup_test.yml, and verify_dist.yml.
+**Notes:**
 
-Remaining `@v` references in README.md, CONTRIBUTING.md, diff/README.md, scan/README.md, setup/README.md, and testdata/ are documentation examples and test harness files — not part of the distributed action.
+Fixed all four github-env-injection findings by adding newline sanitization to the write_output() helper functions in both diff/action.yml and scan/action.yml. Each write_output() function now computes `safe_value=$(printf '%s' "$value" | tr -d '\n\r')` and uses `$safe_value` instead of `$value` when writing to $GITHUB_OUTPUT. This prevents attacker-controlled inputs (version strings, PR titles, PR authors, owner, repo, PR number, repo-url, PR labels) from injecting additional key=value pairs into GITHUB_OUTPUT via embedded newlines.
+
+### Iteration 3
+
+**Fixes applied:** unpinned-uses, missing-permissions, hardcoded-credentials, github-env-injection
+
+**Notes:**
+
+Fixed all four findings across 5 workflow files:
+
+1. unpinned-uses: Pinned all action references to full SHA hashes with tag comments: actions/checkout@v4→11d5960a..., github/codeql-action/{init,analyze}@v3→c4dd10e..., actions/setup-go@v6→924ae3a..., actions/cache@v4→0057852..., golangci/golangci-lint-action@v9→ba0d7d2...
+
+2. missing-permissions: Added 'permissions: {}' top-level blocks to scanner_test.yml, setup_test.yml, and verify_dist.yml.
+
+3. hardcoded-credentials: Replaced hardcoded 'abcdefg123456' API key in setup_test.yml with '${{ secrets.INFRACOST_API_KEY }}' in the setup step input, and updated the Verify step to compare against the secret via an EXPECTED_API_KEY env var.
+
+4. github-env-injection: Fixed write_output() in scanner_release.yml to sanitize values before writing to GITHUB_OUTPUT using 'safe_value=$(printf \'%s\' "$value" | tr -d \'\n\r\')' and writing $safe_value instead of $value.
 
