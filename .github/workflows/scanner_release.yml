@@ -30,14 +30,12 @@ jobs:
           write_output() {
             local name="$1"
             local value="$2"
-            local safe_value
-            safe_value=$(printf '%s' "$value" | tr -d '\n\r')
             local delimiter
             delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
 
             {
               printf '%s<<%s\n' "$name" "$delimiter"
-              printf '%s\n' "$safe_value"
+              printf '%s\n' "$value"
               printf '%s\n' "$delimiter"
             } >> "$GITHUB_OUTPUT"
           }
@@ -105,7 +103,7 @@ jobs:
           - { goos: darwin, goarch: amd64, runner: macos-latest }
           - { goos: darwin, goarch: arm64, runner: macos-latest }
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
