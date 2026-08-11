@@ -4,11 +4,11 @@ go 1.25.11
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/infracost/cli v0.0.14-0.20260708093138-9e810f7555ea
-	github.com/infracost/config v0.10.0
-	github.com/infracost/go-proto v1.25.1
-	github.com/infracost/proto v1.156.0
-	github.com/infracost/vcs v0.2.1
+	github.com/infracost/cli v0.0.14-0.20260721085413-f5bfd98bc908
+	github.com/infracost/config v0.13.0
+	github.com/infracost/go-proto v1.26.0
+	github.com/infracost/proto v1.159.0
+	github.com/infracost/vcs v0.8.10
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
