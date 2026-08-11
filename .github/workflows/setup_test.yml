@@ -24,7 +24,7 @@ jobs:
         version: ["<0.9.11", "0.9.12", "0.10.x", "latest"]
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup infracost
         uses: ./setup
@@ -59,13 +59,13 @@ jobs:
       - name: Verify
         shell: bash
         env:
-          EXPECTED_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
         run: |
           if [ "$INFRACOST_EXPECTED_VERSION" != "$INFRACOST_VERSION_INSTALLED" ]; then
             echo "Unexpected version, expected $INFRACOST_LATEST_VERSION, got: $INFRACOST_VERSION_INSTALLED"
             exit 1;
           fi
-          if [ "$EXPECTED_API_KEY" != "$CONFIGURED_API_KEY" ]; then
+          if [ "$INFRACOST_API_KEY" != "$CONFIGURED_API_KEY" ]; then
             echo "Unexpected api-key, got: $CONFIGURED_API_KEY"
             exit 1;
           fi
