@@ -1,0 +1,68 @@
+name: Run examples
+'on':
+  push:
+    branches:
+      - master
+  pull_request: {}
+defaults:
+  run:
+    shell: bash
+jobs:
+  default:
+    name: Infracost Pull Request Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout source code so we can install the action locally
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Setup Infracost
+        uses: ./setup
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+      - name: Checkout base branch
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: {}
+      - name: Generate Infracost cost estimate baseline
+        run: |
+          infracost breakdown --path=testdata/code/example-project \
+                              --format=json \
+                              --out-file=/tmp/infracost-base.json
+      - name: Checkout PR branch
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Replace m5 instance
+        run: >-
+          find testdata/code -type f  -name '*.tf' -o -name '*.hcl' -o -name
+          '*.tfvars'  | xargs sed -i 's/m5.4xlarge/m5.8xlarge/g'
+      - name: Replace t2 instance
+        run: >-
+          find testdata/code -type f  -name '*.tf' -o -name '*.hcl' -o -name
+          '*.tfvars'  | xargs sed -i 's/t2.micro/t2.medium/g'
+      - name: Generate Infracost diff
+        run: |
+          infracost diff --path=testdata/code/example-project \
+                          --format=json \
+                          --compare-to=/tmp/infracost-base.json \
+                          --out-file=/tmp/infracost.json
+      - name: Post Infracost comment
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |-
+          infracost comment github --path=/tmp/infracost.json \
+          --repo="$GITHUB_REPOSITORY" \
+          --github-token="$GITHUB_TOKEN" \
+          --pull-request=1 \
+          --behavior=update \
+          --dry-run true \
+          > /tmp/infracost_comment.md
+      - run: >-
+          diff -y ./testdata/results/default_comment_golden.md
+          /tmp/infracost_comment.md
+        name: Check the comment
+        if: env.UPDATE_GOLDEN_FILES != 'true'
+      - name: Update the golden comment file
+        run: >-
+          cp /tmp/infracost_comment.md
+          ./testdata/results/default_comment_golden.md
+        if: env.UPDATE_GOLDEN_FILES == 'true'
