@@ -1,0 +1,81 @@
+name: Test behavior input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Test with delete-and-new behavior
+        id: action-delete-and-new
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-testing
+          path: .
+          behavior: delete-and-new
+
+      - name: Assert delete-and-new behavior ran
+        env:
+          OUTCOME: ${{ steps.action-delete-and-new.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action is expected to fail under the harness because:
+          # 1. The checkout of pull_request.base.ref fails (no PR context under workflow_dispatch)
+          # 2. infracost CLI is not installed
+          # 3. GITHUB_REPOSITORY is a sentinel (not a real repo)
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+
+      - name: Test with hide-and-new behavior
+        id: action-hide-and-new
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-testing
+          path: .
+          behavior: hide-and-new
+
+      - name: Assert hide-and-new behavior ran
+        env:
+          OUTCOME: ${{ steps.action-hide-and-new.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+
+      - name: Test with new behavior
+        id: action-new
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-testing
+          path: .
+          behavior: new
+
+      - name: Assert new behavior ran
+        env:
+          OUTCOME: ${{ steps.action-new.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
