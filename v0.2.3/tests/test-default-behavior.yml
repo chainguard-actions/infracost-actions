@@ -1,4 +1,4 @@
-name: Test behavior delete-and-new
+name: Test default behavior
 on:
   workflow_dispatch:
 jobs:
@@ -7,17 +7,17 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      # Test that the action accepts 'delete-and-new' as a valid behavior value.
-      # The action will fail because there is no real Infracost API key or PR
-      # context under the act harness, but it should fail gracefully (not panic
-      # or produce an unexpected exit code).
+      # Test that the action uses 'update' as the default behavior when
+      # the behavior input is not specified. The action will fail because
+      # there is no real Infracost API key or PR context under the act
+      # harness, but it should fail gracefully.
       - id: action
         uses: .
         continue-on-error: true
         with:
           api-key: "fake-api-key-for-testing"
           path: "."
-          behavior: "delete-and-new"
+          # behavior is intentionally omitted to test the default value of 'update'
 
       - name: Assert action ran and failed gracefully
         env:
