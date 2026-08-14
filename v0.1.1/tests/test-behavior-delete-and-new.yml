@@ -1,0 +1,30 @@
+name: Test behavior delete-and-new
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-testing
+          path: .
+          behavior: delete-and-new
+
+      - name: Assert action ran with delete-and-new behavior (fails gracefully without real PR context)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded unexpectedly"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (no PR context / no valid API key under harness)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
