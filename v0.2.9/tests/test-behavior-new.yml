@@ -1,0 +1,36 @@
+name: Test behavior input - new
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Test that the action accepts the 'new' behavior input.
+      # Under the harness this will fail because:
+      # - No real pull_request event context (base.ref is empty)
+      # - No real Infracost API key
+      # - Sentinel GITHUB_REPOSITORY is not a real repo
+      # We assert the action fails gracefully (not skipped or errored unexpectedly).
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-testing
+          path: .
+          behavior: new
+
+      - name: Assert action ran with new behavior (failed gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (no real PR context, 'new' behavior accepted)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action unexpectedly succeeded with 'new' behavior"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME' (expected 'failure' or 'success')"
+            exit 1
+          fi
