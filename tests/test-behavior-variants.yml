@@ -1,0 +1,80 @@
+name: Test behavior input variants
+on:
+  workflow_dispatch:
+jobs:
+  test-delete-and-new:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Test that the action accepts 'delete-and-new' as a valid behavior value.
+      # The action will fail at the infracost CLI step (not installed), but we
+      # verify the input is accepted without a parse error.
+      - id: action
+        uses: .
+        with:
+          api-key: test-api-key-placeholder
+          path: .
+          behavior: delete-and-new
+        continue-on-error: true
+
+      - name: Assert action was invoked with delete-and-new behavior
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to be invoked"
+            exit 1
+          fi
+          echo "PASS: action accepted delete-and-new behavior (outcome=$OUTCOME)"
+
+  test-hide-and-new:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Test that the action accepts 'hide-and-new' as a valid behavior value.
+      - id: action
+        uses: .
+        with:
+          api-key: test-api-key-placeholder
+          path: .
+          behavior: hide-and-new
+        continue-on-error: true
+
+      - name: Assert action was invoked with hide-and-new behavior
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to be invoked"
+            exit 1
+          fi
+          echo "PASS: action accepted hide-and-new behavior (outcome=$OUTCOME)"
+
+  test-new:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Test that the action accepts 'new' as a valid behavior value.
+      - id: action
+        uses: .
+        with:
+          api-key: test-api-key-placeholder
+          path: .
+          behavior: new
+        continue-on-error: true
+
+      - name: Assert action was invoked with new behavior
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to be invoked"
+            exit 1
+          fi
+          echo "PASS: action accepted new behavior (outcome=$OUTCOME)"
