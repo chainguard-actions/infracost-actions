@@ -8,7 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
-| scanner | [`scanner`](https://github.com/chainguard-actions/infracost-actions/tree/scanner) | [`d5090fe`](https://github.com/infracost/actions/commit/d5090feb736175a675fd08657a3e958de09ccbb5) |
+| scanner | [`scanner`](https://github.com/chainguard-actions/infracost-actions/tree/scanner) | [`dea2af0`](https://github.com/infracost/actions/commit/dea2af0ed4afa70b5518fb4164733c387b4b64a5) |
 | v4.1.0 | [`v4.1.0`](https://github.com/chainguard-actions/infracost-actions/tree/v4.1.0) | [`d51fc54`](https://github.com/infracost/actions/commit/d51fc54d23c9ad90f984b884257bd96dc2625067) |
 | v4.2.0 | [`v4.2.0`](https://github.com/chainguard-actions/infracost-actions/tree/v4.2.0) | [`fb736a8`](https://github.com/infracost/actions/commit/fb736a8f219195d6efdca58682069b16fe1bc280) |
 
