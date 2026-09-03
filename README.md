@@ -8,6 +8,9 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| scanner/v0.1.1 | [`scanner/v0.1.1`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.1.1) | [`b921d2e`](https://github.com/infracost/actions/commit/b921d2e04fc2c18bdf622f1889a8df2791474dbb) |
+| scanner/v0.2.0 | [`scanner/v0.2.0`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.0) | [`149700d`](https://github.com/infracost/actions/commit/149700d911eb9db8b2c49d26cb1dece44a9e7890) |
+| scanner/v0.2.1 | [`scanner/v0.2.1`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.1) | [`a1f1aab`](https://github.com/infracost/actions/commit/a1f1aab438c2d0e642e7cd596a1c8750c7c75a5e) |
 | scanner/v0.2.2 | [`scanner/v0.2.2`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.2) | [`b39c654`](https://github.com/infracost/actions/commit/b39c65483b3b14b930f689365cd9009289c63fa4) |
 | scanner/v0.2.3 | [`scanner/v0.2.3`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.3) | [`c2e668f`](https://github.com/infracost/actions/commit/c2e668fda0716ccc96353c6e6438c4a20448821a) |
 | scanner/v0.2.4 | [`scanner/v0.2.4`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.4) | [`dea2af0`](https://github.com/infracost/actions/commit/dea2af0ed4afa70b5518fb4164733c387b4b64a5) |
