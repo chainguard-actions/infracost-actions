@@ -1,17 +1,91 @@
-# infracost/actions
+# Infracost GitHub Actions
 
-See cloud cost estimates and FinOps best practices for Terraform in pull requests.
+This repository contains GitHub Actions for running Infracost in your CI pipeline to see cloud cost estimates for Terraform in pull requests.
 
-Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/infracost/actions](https://github.com/infracost/actions).
+We recommend using the [Infracost GitHub App](https://www.infracost.io/docs/integrations/github_app/) where possible as it's simpler to set up and faster to run. If your organization doesn't allow GitHub App installations, use the `scan` action below as an alternative.
 
-## Versions
+## Actions
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| scanner | [`scanner`](https://github.com/chainguard-actions/infracost-actions/tree/scanner) | [`b921d2e`](https://github.com/infracost/actions/commit/b921d2e04fc2c18bdf622f1889a8df2791474dbb) |
-| v4.1.0 | [`v4.1.0`](https://github.com/chainguard-actions/infracost-actions/tree/v4.1.0) | [`d51fc54`](https://github.com/infracost/actions/commit/d51fc54d23c9ad90f984b884257bd96dc2625067) |
-| v4.2.0 | [`v4.2.0`](https://github.com/chainguard-actions/infracost-actions/tree/v4.2.0) | [`fb736a8`](https://github.com/infracost/actions/commit/fb736a8f219195d6efdca58682069b16fe1bc280) |
+### [`scan`](scan/)
 
+The recommended action when using GitHub Actions. Scans two checkouts of your infrastructure code (base branch and PR branch), calculates a cost diff, and posts a PR comment — all in a single step.
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+
+steps:
+  - uses: actions/checkout@v4
+    with:
+      path: head
+
+  - uses: actions/checkout@v4
+    with:
+      ref: ${{ github.event.pull_request.base.ref }}
+      path: base
+
+  - uses: infracost/actions/scan@v4
+    with:
+      api-key: ${{ secrets.INFRACOST_API_KEY }}
+      base-path: base
+      head-path: head
+```
+
+See the [`scan` README](scan/README.md) for the full list of inputs.
+
+### [`setup`](setup/) (legacy)
+
+Installs the Infracost CLI into your workflow. This requires you to manually run `infracost breakdown`, `infracost diff`, and `infracost comment` as separate steps. Use [`scan`](scan/) instead for a simpler setup.
+
+<details>
+<summary>Legacy setup example</summary>
+
+```yaml
+- name: Setup Infracost
+  uses: infracost/actions/setup@v3
+  with:
+    api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+- name: Checkout base branch
+  uses: actions/checkout@v4
+  with:
+    ref: '${{ github.event.pull_request.base.ref }}'
+
+- name: Generate Infracost cost estimate baseline
+  run: |
+    infracost breakdown --path=. \
+                        --format=json \
+                        --out-file=/tmp/infracost-base.json
+
+- name: Checkout PR branch
+  uses: actions/checkout@v4
+
+- name: Generate Infracost diff
+  run: |
+    infracost diff --path=. \
+                    --format=json \
+                    --compare-to=/tmp/infracost-base.json \
+                    --out-file=/tmp/infracost.json
+
+- name: Post Infracost comment
+  run: |
+    infracost comment github --path=/tmp/infracost.json \
+                             --repo=$GITHUB_REPOSITORY \
+                             --github-token=${{ github.token }} \
+                             --pull-request=${{ github.event.pull_request.number }} \
+                             --behavior=update
+```
+
+</details>
+
+## Contributing
+
+Issues and pull requests are welcome! For major changes, including interface changes, please open an issue first to discuss what you would like to change.
+
+## License
+
+[Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/)
 ## Privacy
 
 This Action contacts Chainguard's licensing server to verify authorization. Connection metadata (IP address, GitHub repository identifier, timestamp, and any metadata encoded in the auth token) is transmitted to Chainguard, Inc. even if authorization is denied in accordance with our [Privacy Notice](https://www.chainguard.dev/legal/privacy-notice)
