@@ -1,0 +1,29 @@
+{
+  "name": "infracost-actions",
+  "description": "Infracost GitHub Actions",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/infracost/actions.git"
+  },
+  "author": "Infracost",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/infracost/actions/issues"
+  },
+  "homepage": "https://github.com/infracost/actions#readme",
+  "directories": {
+    "scripts": "scripts"
+  },
+  "scripts": {
+    "examples:generate_tests": "./scripts/generateExamplesTests.js",
+    "examples:test": "./scripts/testExamples.js",
+    "examples:update_golden": "./scripts/testExamples.js true"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5",
+    "js-yaml": "^4.1.0"
+  },
+  "dependencies": {
+    "@babel/core": "^8.0.1"
+  }
+}

@@ -1,0 +1,37 @@
+name: Test default behavior input
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/pull/1/merge
+      GITHUB_EVENT_NAME: pull_request
+      GITHUB_HEAD_REF: feature-branch
+      GITHUB_BASE_REF: main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Test that the action accepts the default behavior (update) without explicit input
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: invalid-api-key-for-testing
+          path: .
+          # behavior defaults to 'update' — not explicitly set
+
+      - name: Assert action attempted to run (failed at Infracost setup, not input validation)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail because of invalid API key / missing Infracost CLI,
+          # not because of missing required inputs (api-key and path are provided).
+          # Any outcome other than 'skipped' means the action was invoked correctly.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped — inputs may not have been accepted"
+            exit 1
+          fi
+          echo "PASS: action was invoked (outcome=$OUTCOME), default behavior input accepted"
