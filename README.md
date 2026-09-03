@@ -17,6 +17,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | scanner/v0.2.4 | [`scanner/v0.2.4`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.4) | [`dea2af0`](https://github.com/infracost/actions/commit/dea2af0ed4afa70b5518fb4164733c387b4b64a5) |
 | scanner/v0.2.5 | [`scanner/v0.2.5`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.5) | [`c5006bf`](https://github.com/infracost/actions/commit/c5006bf6dc9a08b37d79fbd2a723032ccb8262cb) |
 | scanner/v0.2.6 | [`scanner/v0.2.6`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.6) | [`1157bfb`](https://github.com/infracost/actions/commit/1157bfb21c90836f02bff86266762e8c15f5c776) |
+| scanner/v0.2.7 | [`scanner/v0.2.7`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.7) | [`e605044`](https://github.com/infracost/actions/commit/e60504455f9e99661390185eeb941bc5121995d5) |
 | scanner/v0.2.9 | [`scanner/v0.2.9`](https://github.com/chainguard-actions/infracost-actions/tree/scanner/v0.2.9) | [`df67be7`](https://github.com/infracost/actions/commit/df67be7f643b6b1e738d7d92c0c4893234d584f1) |
 | v4.1.0 | [`v4.1.0`](https://github.com/chainguard-actions/infracost-actions/tree/v4.1.0) | [`d51fc54`](https://github.com/infracost/actions/commit/d51fc54d23c9ad90f984b884257bd96dc2625067) |
 | v4.2.0 | [`v4.2.0`](https://github.com/chainguard-actions/infracost-actions/tree/v4.2.0) | [`fb736a8`](https://github.com/infracost/actions/commit/fb736a8f219195d6efdca58682069b16fe1bc280) |
