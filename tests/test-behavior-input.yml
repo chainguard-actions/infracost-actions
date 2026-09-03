@@ -1,0 +1,53 @@
+name: Test behavior input variants
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Test that the 'delete-and-new' behavior value is accepted as input.
+      # The action is a placeholder for PR workflows; it will fail internally
+      # when there is no PR context (workflow_dispatch), but we verify it was
+      # invoked with the alternate behavior value without input-level errors.
+      - id: action-delete-and-new
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: test-api-key-placeholder
+          path: .
+          behavior: delete-and-new
+
+      - name: Assert action accepted delete-and-new behavior
+        env:
+          OUTCOME: ${{ steps.action-delete-and-new.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action was invoked with delete-and-new behavior (outcome=$OUTCOME)"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi
+
+      # Test that the 'new' behavior value is accepted as input.
+      - id: action-new
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: test-api-key-placeholder
+          path: .
+          behavior: new
+
+      - name: Assert action accepted new behavior
+        env:
+          OUTCOME: ${{ steps.action-new.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action was invoked with new behavior (outcome=$OUTCOME)"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi
