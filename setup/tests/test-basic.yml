@@ -1,0 +1,20 @@
+name: Test basic Infracost setup
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup
+        uses: .
+        with:
+          api-key: test-api-key-for-ci
+      - name: Assert infracost CLI is installed
+        run: |
+          if ! command -v infracost &>/dev/null; then
+            echo "FAIL: infracost CLI not found on PATH"
+            exit 1
+          fi
+          echo "PASS: infracost CLI is installed"
+          infracost --version

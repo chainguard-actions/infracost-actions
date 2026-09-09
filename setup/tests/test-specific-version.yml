@@ -1,0 +1,27 @@
+name: Test Infracost setup with specific version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup
+        uses: .
+        with:
+          api-key: test-api-key-for-ci
+          version: 0.10.x
+      - name: Assert infracost CLI is installed with correct version
+        run: |
+          if ! command -v infracost &>/dev/null; then
+            echo "FAIL: infracost CLI not found on PATH"
+            exit 1
+          fi
+          VERSION_OUTPUT=$(infracost --version 2>&1)
+          echo "version output: $VERSION_OUTPUT"
+          if echo "$VERSION_OUTPUT" | grep -qE 'v?0\.10\.'; then
+            echo "PASS: infracost 0.10.x is installed"
+          else
+            echo "FAIL: expected version 0.10.x but got: $VERSION_OUTPUT"
+            exit 1
+          fi
