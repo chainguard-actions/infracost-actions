@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test behavior delete-and-new
 on:
   workflow_dispatch:
 jobs:
@@ -20,7 +20,7 @@ jobs:
         with:
           api-key: "test-api-key-placeholder"
           path: /tmp/tf-test
-          behavior: update
+          behavior: delete-and-new
 
       - name: Assert action ran (expected to fail gracefully without real API key and PR context)
         env:

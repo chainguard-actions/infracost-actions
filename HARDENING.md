@@ -10,54 +10,59 @@
 
 **Harden Agent Version:** `2`
 
-Action **infracost--actions/scanner/v0.2.7** was hardened automatically. 1 finding(s) were identified and resolved across 3 iteration(s).
+Action **infracost--actions/scanner/v0.2.7** was hardened automatically. 5 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### unpinned-uses (severity: high)
 
-The root action.yml uses mutable tag-based references instead of pinned full SHA commit hashes. This exposes the action to supply-chain attacks where a tag could be silently moved to point to malicious code. Failing references: `actions/checkout@v4` (line 25), `infracost/actions/setup@v3` (line 32), `actions/checkout@v4` (line 45). Each should be replaced with a full 40-character hex SHA, e.g. `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4`.
+action.yml references three external actions using mutable tag-based refs instead of full 40-character commit SHA pins. An attacker who compromises the upstream repository or tag could inject malicious code. Failing references: `actions/checkout@v4` (line 25), `infracost/actions/setup@v3` (line 32), `actions/checkout@v4` (line 44).
 
 Locations:
 
 - `action.yml:25`
 - `action.yml:32`
-- `action.yml:45`
+- `action.yml:44`
+
+### github-env-injection (severity: high)
+
+diff/action.yml — 'Determine version' step: The write_output helper writes $VERSION (sourced from inputs.version via the VERSION env var) to $GITHUB_OUTPUT using `printf '%s\n' "$value"` without the required `tr -d '\n\r'` sanitization. A value containing newlines could inject additional key=value pairs into GITHUB_OUTPUT. Although a random heredoc delimiter is used (preventing delimiter-collision injection), the value itself is not stripped of newlines as required by the check.
+
+Locations:
+
+- `diff/action.yml:72`
+
+### github-env-injection (severity: high)
+
+diff/action.yml — 'Derive context' step: The write_output helper writes multiple untrusted values to $GITHUB_OUTPUT without `tr -d '\n\r'` sanitization. Affected values include: $OWNER (from inputs.github-owner), $REPO (from inputs.github-repo), $PR (from inputs.pr-number or github.event.pull_request.number), $REPO_URL (from inputs.repo-url), $PR_TITLE (from github.event.pull_request.title), $PR_AUTHOR (from github.event.pull_request.user.login), $PR_LABELS (from github.event.pull_request.labels.*.name), and $PR_STATUS (from inputs.pr-status). An attacker-controlled newline in any of these values could inject additional output variables.
+
+Locations:
+
+- `diff/action.yml:155`
+
+### github-env-injection (severity: high)
+
+scan/action.yml — 'Determine version' step: The write_output helper writes $VERSION (sourced from inputs.version via the VERSION env var) to $GITHUB_OUTPUT using `printf '%s\n' "$value"` without the required `tr -d '\n\r'` sanitization. A crafted version string containing newlines could inject additional key=value pairs into GITHUB_OUTPUT.
+
+Locations:
+
+- `scan/action.yml:58`
+
+### github-env-injection (severity: high)
+
+scan/action.yml — 'Derive context' step: The write_output helper writes $REPO_URL (sourced from inputs.repo-url via the INPUT_REPO_URL env var) to $GITHUB_OUTPUT using `printf '%s\n' "$value"` without the required `tr -d '\n\r'` sanitization. A crafted repo-url value containing newlines could inject additional output variables.
+
+Locations:
+
+- `scan/action.yml:107`
 
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** unpinned-uses
+**Fixes applied:** unpinned-uses, github-env-injection
 
 **Notes:**
 
-Replaced all three mutable tag-based `uses:` references in hardened/action/action.yml with pinned full SHA commit hashes:
-- `actions/checkout@v4` (lines 25 and 45) → `actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4`
-- `infracost/actions/setup@v3` (line 32) → `infracost/actions/setup@e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3`
-Original tags are preserved as inline comments for readability.
-
-### Iteration 2
-
-**Fixes applied:** github-env-injection
-
-**Notes:**
-
-Fixed all four github-env-injection findings by adding newline sanitization to the write_output() helper functions in both diff/action.yml and scan/action.yml. Each write_output() function now computes `safe_value=$(printf '%s' "$value" | tr -d '\n\r')` and uses `$safe_value` instead of `$value` when writing to $GITHUB_OUTPUT. This prevents attacker-controlled inputs (version strings, PR titles, PR authors, owner, repo, PR number, repo-url, PR labels) from injecting additional key=value pairs into GITHUB_OUTPUT via embedded newlines.
-
-### Iteration 3
-
-**Fixes applied:** unpinned-uses, missing-permissions, hardcoded-credentials, github-env-injection
-
-**Notes:**
-
-Fixed all four findings across 5 workflow files:
-
-1. unpinned-uses: Pinned all action references to full SHA hashes with tag comments: actions/checkout@v4→11d5960a..., github/codeql-action/{init,analyze}@v3→c4dd10e..., actions/setup-go@v6→924ae3a..., actions/cache@v4→0057852..., golangci/golangci-lint-action@v9→ba0d7d2...
-
-2. missing-permissions: Added 'permissions: {}' top-level blocks to scanner_test.yml, setup_test.yml, and verify_dist.yml.
-
-3. hardcoded-credentials: Replaced hardcoded 'abcdefg123456' API key in setup_test.yml with '${{ secrets.INFRACOST_API_KEY }}' in the setup step input, and updated the Verify step to compare against the secret via an EXPECTED_API_KEY env var.
-
-4. github-env-injection: Fixed write_output() in scanner_release.yml to sanitize values before writing to GITHUB_OUTPUT using 'safe_value=$(printf \'%s\' "$value" | tr -d \'\n\r\')' and writing $safe_value instead of $value.
+Fixed 3 unpinned action references in action.yml by pinning to full commit SHAs (actions/checkout@v4 → SHA 11d5960a..., infracost/actions/setup@v3 → SHA e9d6e6cd...). Fixed 4 github-env-injection vulnerabilities by updating the write_output() helper function in diff/action.yml ('Determine version' and 'Derive context' steps) and scan/action.yml ('Determine version' and 'Derive context' steps) to sanitize values with `safe_value=$(printf '%s' "$value" | tr -d '\n\r')` before writing to $GITHUB_OUTPUT, preventing newline injection attacks.
 

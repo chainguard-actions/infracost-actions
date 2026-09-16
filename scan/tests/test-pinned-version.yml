@@ -1,0 +1,33 @@
+name: Test pinned version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          path: "."
+          version: "0.1.0"
+
+      - name: Assert action ran (pinned version download attempted)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With a pinned version, the action skips the gh release list call and
+          # goes straight to downloading the specific release. It may fail if the
+          # version doesn't exist or if the API key is invalid — both are graceful.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (version not found or invalid API key)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with pinned version"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

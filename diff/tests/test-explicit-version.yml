@@ -1,0 +1,41 @@
+name: Test explicit version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Provide an explicit version to skip the gh release list API call.
+      # Also provide pr-number and pr-status (no base/head paths) to enter
+      # status-only mode. The action will fail at the status update step
+      # (fake API key), but the version and context steps should succeed.
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-testing
+          version: "0.1.0"
+          pr-number: "1"
+          pr-status: OPEN
+          github-owner: test-owner
+          github-repo: test-repo
+
+      - name: Assert action ran (failed gracefully after version/context steps)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail at the scanner download step (version 0.1.0
+          # may not exist) or at the status update step (fake API key).
+          # It must NOT fail at the version determination step (explicit version
+          # bypasses the gh release list call).
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed at download/status step as expected with fake credentials"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

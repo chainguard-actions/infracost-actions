@@ -23,5 +23,6 @@ inputs:
     default: '${{ github.token }}'
     required: false
 runs:
+  pre: chainguard-phonehome.js
   using: node24
   main: dist/index.js

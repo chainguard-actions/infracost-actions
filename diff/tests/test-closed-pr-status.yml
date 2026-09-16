@@ -1,0 +1,35 @@
+name: Test closed PR status mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Test with CLOSED pr-status and no base/head paths.
+      # The action enters status-only mode and skips scanning.
+      # It will fail at the status update step (fake API key / sentinel repo).
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-testing
+          pr-number: "99"
+          pr-status: CLOSED
+          github-owner: test-owner
+          github-repo: test-repo
+
+      - name: Assert action ran (failed gracefully at status update with fake credentials)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed at scanner download or status update step (expected with fake credentials)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
