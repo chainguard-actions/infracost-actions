@@ -18,12 +18,11 @@ jobs:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action may fail if the self-hosted pricing API endpoint is unreachable,
-          # but it should not fail due to the input being unrecognized.
-          # We accept both success and failure as valid outcomes here,
-          # since the endpoint is intentionally a non-existent self-hosted URL.
+          # The action may succeed or fail depending on whether the API key and endpoint are valid.
+          # What matters is that the pricing-api-endpoint input was accepted (not rejected as unknown).
+          # A failure here is expected when using a fake endpoint/key — that's acceptable.
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran and processed pricing-api-endpoint input (outcome: $OUTCOME)"
+            echo "PASS: action ran with pricing-api-endpoint input (outcome: $OUTCOME)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
