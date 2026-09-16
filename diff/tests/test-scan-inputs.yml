@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Prepare base and head directories for scanning inputs
+      - name: Prepare base and head directories
         run: |
           mkdir -p /tmp/base-checkout
           mkdir -p /tmp/head-checkout
@@ -18,15 +18,15 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          api-key: fake-api-key-for-input-coverage
+          api-key: fake-api-key
+          pr-number: "1"
           base-path: /tmp/base-checkout
           head-path: /tmp/head-checkout
           project: my-project
           repo-url: https://github.com/example/repo
-          pr-number: "1"
           github-token: ${{ github.token }}
 
-      - name: Assert action ran (inputs were accepted; failure expected without real API key/scanner)
+      - name: Assert action ran (download or API call fails gracefully on harness)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
@@ -34,7 +34,7 @@ jobs:
           if [ "$OUTCOME" = "success" ]; then
             echo "PASS: action succeeded"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected without real Infracost API key and scanner binary)"
+            echo "PASS: action failed gracefully (expected — scanner binary download or API call fails in harness)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
