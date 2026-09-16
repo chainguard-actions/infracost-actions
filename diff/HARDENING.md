@@ -10,15 +10,5 @@
 
 **Harden Agent Version:** `2`
 
-Action **infracost--actions--diff/scanner/v0.2.7** was hardened automatically. 0 finding(s) were identified and resolved across 1 iteration(s).
-
-## Iteration Notes
-
-### Iteration 1
-
-**Fixes applied:** github-env-injection
-
-**Notes:**
-
-Fixed both write_output() helper functions in action.yml (in the 'Determine version' step at line ~57 and the 'Derive context' step at line ~100). Each function now sanitizes the value before writing to $GITHUB_OUTPUT: added `local safe` and `safe=$(printf '%s' "$value" | tr -d '\n\r')`, then replaced `printf '%s\n' "$value"` with `printf '%s\n' "$safe"` inside the heredoc block. This prevents newline injection from attacker-controllable inputs like $VERSION, $PR_TITLE, $PR_AUTHOR, $PR_LABELS, $OWNER, $REPO, $PR, $REPO_URL, and $PR_STATUS.
+Action **infracost--actions--diff/scanner/v0.2.7** was hardened automatically. 0 finding(s) were identified and resolved across 0 iteration(s).
 
