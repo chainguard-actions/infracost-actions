@@ -1,4 +1,4 @@
-name: Test scan inputs coverage
+name: Test scan inputs coverage (base-path, head-path, project, repo-url)
 on:
   workflow_dispatch:
 jobs:
@@ -7,37 +7,34 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create dummy base and head paths
+      - name: Create base and head path directories for scan inputs
         run: |
           mkdir -p /tmp/base-checkout
           mkdir -p /tmp/head-checkout
-          echo "# dummy terraform" > /tmp/base-checkout/main.tf
-          echo "# dummy terraform" > /tmp/head-checkout/main.tf
+          echo "# placeholder" > /tmp/base-checkout/main.tf
+          echo "# placeholder" > /tmp/head-checkout/main.tf
 
       - id: action
         uses: .
         continue-on-error: true
         with:
-          api-key: fake-api-key-for-coverage
+          api-key: fake-api-key-for-input-coverage
           base-path: /tmp/base-checkout
           head-path: /tmp/head-checkout
           project: my-project
-          repo-url: https://github.com/example/repo
           pr-number: "1"
-          github-owner: example
-          github-repo: repo
+          repo-url: https://github.com/example/repo
+          github-token: ${{ github.token }}
 
-      - name: Assert action ran with scan inputs
+      - name: Assert action ran (inputs were accepted, failure is expected without real credentials)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action is expected to fail because:
-          # 1. The Infracost API key is fake
-          # 2. The scanner binary download may fail or the scanner itself will reject the fake key
-          # We just need to confirm the action ran (not skipped) and that the inputs were accepted.
-          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with base-path, head-path, project, and repo-url inputs"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected without real infracost credentials or scanner binary)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

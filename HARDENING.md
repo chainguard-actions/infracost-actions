@@ -10,19 +10,19 @@
 
 **Harden Agent Version:** `2`
 
-Action **infracost--actions/scanner/v0.2.7** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
+Action **infracost--actions/scanner/v0.2.7** was hardened automatically. 1 finding(s) were identified and resolved across 2 iteration(s).
 
 ## Findings Fixed
 
 ### unpinned-uses (severity: high)
 
-action.yml contains three `uses:` references pinned to mutable version tags rather than immutable 40-character commit SHAs. This exposes the action to supply-chain attacks if the referenced tags are moved or the upstream repositories are compromised. Affected references: `actions/checkout@v4` (two occurrences) and `infracost/actions/setup@v3`.
+action.yml references three external actions using mutable version tags instead of full 40-character commit SHA digests. This exposes the action to supply-chain attacks if the referenced tag is moved or the upstream repository is compromised. Failing references: `uses: actions/checkout@v4` (line 25), `uses: infracost/actions/setup@v3` (line 32), and `uses: actions/checkout@v4` (line 43). Each should be pinned to a full SHA, e.g. `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4`.
 
 Locations:
 
-- `action.yml:24`
-- `action.yml:30`
-- `action.yml:44`
+- `action.yml:25`
+- `action.yml:32`
+- `action.yml:43`
 
 ## Iteration Notes
 
@@ -32,5 +32,18 @@ Locations:
 
 **Notes:**
 
-Pinned all three unpinned `uses:` references in hardened/action/action.yml to immutable 40-character commit SHAs: (1) both `actions/checkout@v4` occurrences → `@11d5960a326750d5838078e36cf38b85af677262 # v4`, and (2) `infracost/actions/setup@v3` → `@e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3`. Original tag names preserved as inline comments.
+Pinned all three unpinned action references in hardened/action/action.yml to full 40-character commit SHAs: (1) actions/checkout@v4 → @11d5960a326750d5838078e36cf38b85af677262 # v4 (applied to both occurrences at lines 25 and 43), and (2) infracost/actions/setup@v3 → @e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3 (line 32). Original version tags preserved as inline comments for readability.
+
+### Iteration 2
+
+**Fixes applied:** github-env-injection
+
+**Notes:**
+
+Fixed all four github-env-injection findings by adding newline sanitization to the write_output function in each affected step:
+1. diff/action.yml 'Determine version' step: Added `safe_value=$(printf '%s' "$value" | tr -d '\n\r')` and use `$safe_value` when writing to $GITHUB_OUTPUT.
+2. diff/action.yml 'Derive context' step: Same fix applied to the write_output function that writes OWNER, REPO, PR, REPO_URL, PR_TITLE, PR_AUTHOR, PR_LABELS, and PR_STATUS.
+3. scan/action.yml 'Determine version' step: Same fix applied to sanitize VERSION before writing.
+4. scan/action.yml 'Derive context' step: Same fix applied to sanitize REPO_URL before writing.
+All write_output functions now strip carriage returns and newlines from values before writing them to $GITHUB_OUTPUT, preventing injection of additional key=value pairs via attacker-controlled inputs.
 
