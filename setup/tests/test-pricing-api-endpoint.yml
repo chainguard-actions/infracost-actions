@@ -18,8 +18,10 @@ jobs:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action may fail because the self-hosted pricing-api-endpoint is not real,
-          # but it must not be skipped — it must have run (success or failure).
+          # The action may succeed (if it installs the CLI) or fail gracefully
+          # (if the self-hosted endpoint is unreachable). Either is acceptable —
+          # what matters is that the pricing-api-endpoint input was accepted and
+          # the action did not crash unexpectedly (i.e. outcome is not 'skipped').
           if [ "$OUTCOME" = "skipped" ]; then
             echo "FAIL: action was skipped unexpectedly"
             exit 1
