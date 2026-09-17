@@ -10,51 +10,37 @@
 
 **Harden Agent Version:** `2`
 
-Action **infracost--actions/scanner/v0.2.7** was hardened automatically. 5 finding(s) were identified and resolved across 1 iteration(s).
+Action **infracost--actions/scanner/v0.2.7** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### unpinned-uses (severity: high)
 
-action.yml references three action steps using mutable version tags instead of pinned SHA digests: `actions/checkout@v4` (used twice) and `infracost/actions/setup@v3`. Any of these tags could be moved to a different commit, enabling a supply-chain attack.
+action.yml uses three `uses:` references pinned to mutable tags instead of full 40-character SHA commit digests. These can be silently updated by the upstream repository, enabling supply-chain attacks. Failing references: `actions/checkout@v4` (line 25), `infracost/actions/setup@v3` (line 31), `actions/checkout@v4` (line 44).
 
 Locations:
 
 - `action.yml:25`
 - `action.yml:31`
-- `action.yml:46`
+- `action.yml:44`
 
 ### github-env-injection (severity: high)
 
-diff/action.yml 'Determine version' step writes the env var `$VERSION` (sourced from `inputs.version` via `VERSION: ${{ inputs.version }}`) to `$GITHUB_OUTPUT` through the `write_output` helper function without applying the required `printf '%s' ... | tr -d '\n\r'` sanitization. A caller-controlled newline in the version string could inject additional key=value pairs into the output file.
+In diff/action.yml, the 'Determine version' step writes `$VERSION` (sourced from `inputs.version` via env var) to $GITHUB_OUTPUT using `printf '%s\n' "$value"` inside the write_output() helper without `tr -d '\n\r'` sanitization. A newline in the value could inject additional output entries. Similarly, the 'Derive context' step writes multiple untrusted values — including `$PR_TITLE` (from `github.event.pull_request.title`), `$PR_AUTHOR` (from `github.event.pull_request.user.login`), `$PR_LABELS` (from `github.event.pull_request.labels.*.name`), `$OWNER` (from `inputs.github-owner`), `$REPO` (from `inputs.github-repo`), `$PR` (from `inputs.pr-number`), and `$REPO_URL` (from `inputs.repo-url`) — all to $GITHUB_OUTPUT without newline sanitization. The random heredoc delimiter prevents delimiter collision but does not strip embedded newlines from the values themselves.
 
 Locations:
 
-- `diff/action.yml:65`
+- `diff/action.yml:41`
+- `diff/action.yml:100`
 
 ### github-env-injection (severity: high)
 
-diff/action.yml 'Derive context' step writes multiple untrusted values to `$GITHUB_OUTPUT` via the `write_output` helper without `tr -d '\n\r'` sanitization. Affected variables include: `$PR_TITLE` (from `github.event.pull_request.title`), `$PR_AUTHOR` (from `github.event.pull_request.user.login`), `$PR_LABELS` (from `github.event.pull_request.labels.*.name`), `$OWNER` (from `inputs.github-owner`), `$REPO` (from `inputs.github-repo`), and `$PR` (from `inputs.pr-number`). An attacker-controlled newline in any of these values could inject additional outputs.
+In scan/action.yml, the 'Determine version' step writes `$VERSION` (sourced from `inputs.version` via env var) to $GITHUB_OUTPUT using `printf '%s\n' "$value"` inside the write_output() helper without `tr -d '\n\r'` sanitization. The 'Derive context' step similarly writes `$REPO_URL` (sourced from `inputs.repo-url`) to $GITHUB_OUTPUT without newline sanitization. An attacker-controlled newline in these values could inject additional output entries.
 
 Locations:
 
-- `diff/action.yml:152`
-
-### github-env-injection (severity: high)
-
-scan/action.yml 'Determine version' step writes the env var `$VERSION` (sourced from `inputs.version` via `VERSION: ${{ inputs.version }}`) to `$GITHUB_OUTPUT` through the `write_output` helper function without applying the required `printf '%s' ... | tr -d '\n\r'` sanitization. A caller-controlled newline in the version string could inject additional key=value pairs into the output file.
-
-Locations:
-
-- `scan/action.yml:47`
-
-### github-env-injection (severity: high)
-
-scan/action.yml 'Derive context' step writes `$REPO_URL` (sourced from `inputs.repo-url` via `INPUT_REPO_URL: ${{ inputs.repo-url }}`) to `$GITHUB_OUTPUT` through the `write_output` helper function without applying the required `printf '%s' ... | tr -d '\n\r'` sanitization. A caller-controlled newline in the repo-url input could inject additional key=value pairs into the output file.
-
-Locations:
-
-- `scan/action.yml:89`
+- `scan/action.yml:24`
+- `scan/action.yml:67`
 
 ## Iteration Notes
 
@@ -64,5 +50,13 @@ Locations:
 
 **Notes:**
 
-Fixed 3 unpinned action references in action.yml by pinning to full commit SHAs (actions/checkout@v4 → SHA 11d5960a..., infracost/actions/setup@v3 → SHA e9d6e6cd...). Fixed 4 github-env-injection findings by modifying the write_output() helper function in each affected step to sanitize values using `printf '%s' "$2" | tr -d '\n\r'` before writing to GITHUB_OUTPUT. This prevents attacker-controlled newlines in inputs like version, PR title, PR author, PR labels, github-owner, github-repo, pr-number, and repo-url from injecting additional key=value pairs into the output file.
+Fixed all three findings:
+
+1. unpinned-uses (action.yml): Pinned all three `uses:` references to full 40-character SHA digests:
+   - actions/checkout@v4 → @11d5960a326750d5838078e36cf38b85af677262 # v4 (two occurrences, lines 25 and 44)
+   - infracost/actions/setup@v3 → @e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3 (line 31)
+
+2. github-env-injection (diff/action.yml): Added newline sanitization to both write_output() helper functions (in 'Determine version' and 'Derive context' steps). Each now computes `safe_value=$(printf '%s' "$value" | tr -d '\n\r')` and writes `$safe_value` to GITHUB_OUTPUT instead of the raw `$value`.
+
+3. github-env-injection (scan/action.yml): Same fix applied to both write_output() helper functions in scan/action.yml ('Determine version' and 'Derive context' steps).
 
