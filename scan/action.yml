@@ -50,7 +50,8 @@ runs:
       run: |
         write_output() {
           local name="$1"
-          local value="$2"
+          local value
+          value="$(printf '%s' "$2" | tr -d '\n\r')"
           local delimiter
           delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
 
@@ -105,7 +106,8 @@ runs:
       run: |
         write_output() {
           local name="$1"
-          local value="$2"
+          local value
+          value="$(printf '%s' "$2" | tr -d '\n\r')"
           local delimiter
           delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
 
