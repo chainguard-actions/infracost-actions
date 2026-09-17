@@ -16,19 +16,12 @@ Action **infracost--actions/scanner/v0.2.7** was hardened automatically. 1 findi
 
 ### unpinned-uses (severity: high)
 
-action.yml contains three `uses:` references pinned to mutable version tags instead of immutable 40-character commit SHAs. This exposes the action to supply-chain attacks if the referenced tags are moved or the upstream repositories are compromised.
-
-Failing references:
-- `uses: actions/checkout@v4` (line 25)
-- `uses: infracost/actions/setup@v3` (line 32)
-- `uses: actions/checkout@v4` (line 46)
-
-Each should be replaced with a full SHA pin, e.g. `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4`.
+action.yml references GitHub Actions using mutable version tags instead of pinned full-length SHA digests, making the action vulnerable to supply-chain attacks if the referenced tag is moved or compromised. Failing references: `uses: actions/checkout@v4` (lines 25 and 46), `uses: infracost/actions/setup@v3` (line 31). Each should be replaced with a full 40-character commit SHA, e.g. `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4`.
 
 Locations:
 
 - `action.yml:25`
-- `action.yml:32`
+- `action.yml:31`
 - `action.yml:46`
 
 ## Iteration Notes
@@ -39,5 +32,5 @@ Locations:
 
 **Notes:**
 
-Pinned all three mutable tag references in hardened/action/action.yml to immutable commit SHAs: (1) actions/checkout@v4 → @11d5960a326750d5838078e36cf38b85af677262 # v4 (applied to both occurrences at lines 25 and 46), (2) infracost/actions/setup@v3 → @e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3. Original tags preserved as inline comments for readability.
+Pinned all three unpinned action references in hardened/action/action.yml to their full 40-character commit SHAs: (1) actions/checkout@v4 (line 25) → @11d5960a326750d5838078e36cf38b85af677262 # v4, (2) infracost/actions/setup@v3 (line 31) → @e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3, (3) actions/checkout@v4 (line 46) → @11d5960a326750d5838078e36cf38b85af677262 # v4. Original tags preserved as inline comments for readability.
 
