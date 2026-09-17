@@ -10,7 +10,7 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          api-key: ${{ secrets.INFRACOST_API_KEY || 'ico-test-key-placeholder' }}
+          api-key: ico-test-fake-key-for-ci
           version: 0.10.x
           pricing-api-endpoint: https://cloud-pricing-api.example.com
       - name: Assert action ran with pricing-api-endpoint input
@@ -18,10 +18,11 @@ jobs:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action may fail if the pricing-api-endpoint is unreachable or the API key is invalid,
-          # but it must not be skipped — it must have run (success or failure).
-          if [ "$OUTCOME" = "skipped" ]; then
-            echo "FAIL: action was skipped, expected it to run"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with pricing-api-endpoint set"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake key/endpoint)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
           fi
-          echo "PASS: action ran with pricing-api-endpoint input (outcome: $OUTCOME)"
