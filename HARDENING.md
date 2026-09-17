@@ -16,17 +16,13 @@ Action **infracost--actions/scanner/v0.2.7** was hardened automatically. 1 findi
 
 ### unpinned-uses (severity: high)
 
-action.yml contains three `uses:` references pinned to mutable tags instead of immutable 40-character commit SHAs, making the action vulnerable to supply-chain attacks if those tags are moved:
-- `uses: actions/checkout@v4` (line 25)
-- `uses: infracost/actions/setup@v3` (line 32)
-- `uses: actions/checkout@v4` (line 46)
-These should be pinned to full SHA digests, e.g. `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4`.
+action.yml contains three `uses:` references pinned to mutable version tags rather than immutable full-length commit SHAs. This means a compromised upstream action could silently change what code runs in the workflow. Failing references: `actions/checkout@v4` (lines ~24 and ~43), `infracost/actions/setup@v3` (line ~30). Each should be replaced with a full 40-character hex SHA, e.g. `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4`.
 
 Locations:
 
-- `action.yml:25`
-- `action.yml:32`
-- `action.yml:46`
+- `action.yml:24`
+- `action.yml:30`
+- `action.yml:43`
 
 ## Iteration Notes
 
@@ -36,5 +32,5 @@ Locations:
 
 **Notes:**
 
-Pinned all three mutable tag references in hardened/action/action.yml to immutable commit SHAs: actions/checkout@v4 → @11d5960a326750d5838078e36cf38b85af677262 (used twice, lines 25 and 46), and infracost/actions/setup@v3 → @e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 (line 32). Original tag names preserved as inline comments.
+Pinned all three mutable tag references in action.yml to full 40-character commit SHAs: actions/checkout@v4 (two occurrences) → @11d5960a326750d5838078e36cf38b85af677262 # v4, and infracost/actions/setup@v3 → @e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3. Original tags preserved as inline comments.
 
