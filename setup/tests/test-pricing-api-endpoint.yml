@@ -10,7 +10,7 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          api-key: test-api-key-for-self-hosted
+          api-key: ${{ secrets.INFRACOST_API_KEY || 'ico-test-key-placeholder' }}
           pricing-api-endpoint: https://cloud-pricing-api.example.com
           version: 0.10.x
       - name: Assert action ran with pricing-api-endpoint input
@@ -18,13 +18,12 @@ jobs:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action may succeed (installs CLI and configures endpoint) or fail
-          # (cannot reach the self-hosted endpoint). Either way, the input must
-          # be accepted without a crash unrelated to connectivity.
-          if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with pricing-api-endpoint set"
-          elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (self-hosted endpoint not reachable in test environment)"
+          # The action may succeed (if it installs the CLI without validating the endpoint)
+          # or fail gracefully (if it tries to reach the custom endpoint during setup).
+          # Either outcome is acceptable — what matters is that the input was accepted
+          # and the action did not crash unexpectedly (e.g. with a missing-input error).
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action handled pricing-api-endpoint input (outcome: $OUTCOME)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

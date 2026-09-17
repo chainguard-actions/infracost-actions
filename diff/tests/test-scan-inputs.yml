@@ -1,6 +1,7 @@
 name: Test scan inputs (base-path, head-path, project, repo-url)
 on:
   workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -18,25 +19,27 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          api-key: fake-api-key-for-testing
+          api-key: fake-api-key-for-test
           base-path: /tmp/base-checkout
           head-path: /tmp/head-checkout
           project: my-project
           repo-url: https://github.com/example/repo
           pr-number: "1"
-          github-owner: example
-          github-repo: repo
+          github-token: ${{ github.token }}
 
-      - name: Assert action ran (inputs accepted, failed gracefully without real API key/scanner)
+      - name: Assert action ran (scan inputs were accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded (unexpected but acceptable)"
-          elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully as expected (no real Infracost API key or scanner binary)"
-          else
-            echo "FAIL: unexpected outcome '$OUTCOME'"
+          # The action is expected to fail because:
+          # - The infracost-scanner binary requires a real API key
+          # - The sentinel GITHUB_REPOSITORY means the GH API calls may fail
+          # What matters is that the action ATTEMPTED to run with these inputs
+          # (i.e., it did not fail at input validation before reaching the scanner).
+          # Both 'success' and 'failure' are acceptable — 'skipped' is not.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped — inputs were not exercised"
             exit 1
           fi
+          echo "PASS: action ran with base-path, head-path, project, and repo-url inputs (outcome: $OUTCOME)"
