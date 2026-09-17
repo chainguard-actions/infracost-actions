@@ -67,15 +67,8 @@ runs:
           local name="$1"
           local value="$2"
           local safe_value
-          local delimiter
-          delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
           safe_value="$(printf '%s' "$value" | tr -d '\n\r')"
-
-          {
-            printf '%s<<%s\n' "$name" "$delimiter"
-            printf '%s\n' "$safe_value"
-            printf '%s\n' "$delimiter"
-          } >> "$GITHUB_OUTPUT"
+          printf '%s=%s\n' "$name" "$safe_value" >> "$GITHUB_OUTPUT"
         }
 
         if [ "$VERSION" = "latest" ]; then
@@ -139,15 +132,8 @@ runs:
           local name="$1"
           local value="$2"
           local safe_value
-          local delimiter
-          delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
           safe_value="$(printf '%s' "$value" | tr -d '\n\r')"
-
-          {
-            printf '%s<<%s\n' "$name" "$delimiter"
-            printf '%s\n' "$safe_value"
-            printf '%s\n' "$delimiter"
-          } >> "$GITHUB_OUTPUT"
+          printf '%s=%s\n' "$name" "$safe_value" >> "$GITHUB_OUTPUT"
         }
 
         OWNER="$INPUT_GITHUB_OWNER"
