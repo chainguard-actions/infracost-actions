@@ -16,19 +16,26 @@ Action **infracost--actions--scan/scanner/v0.2.7** was hardened automatically. 2
 
 ### github-env-injection (severity: high)
 
-In the 'Determine version' step, the env var VERSION (sourced from inputs.version, which is user-controlled) is written to $GITHUB_OUTPUT via the write_output helper function using `printf '%s\n' "$value"`. Although a random heredoc delimiter is used to prevent key injection, the value itself is never sanitized with `printf '%s' ... | tr -d '\n\r'` before the write. A caller can supply a newline-containing version string to inject arbitrary key=value pairs into GITHUB_OUTPUT.
+The 'Determine version' step writes the value of VERSION (sourced from inputs.version via the VERSION env var) to $GITHUB_OUTPUT using the write_output() helper. The helper uses a random heredoc delimiter to prevent key injection, but it does NOT sanitize the value with `printf '%s' ... | tr -d '\n\r'` before writing. An attacker-controlled input.version containing embedded newlines could inject additional key=value pairs into $GITHUB_OUTPUT, potentially poisoning downstream steps.
+
+Offending pattern:
+  write_output "version" "$VERSION"   # VERSION = inputs.version, no tr -d newlines
+  write_output "tag" "scanner/v${VERSION}"
 
 Locations:
 
-- `action.yml:50`
+- `action.yml:49`
 
 ### github-env-injection (severity: high)
 
-In the 'Derive context' step, the env var INPUT_REPO_URL (sourced from inputs.repo-url, which is user-controlled) is assigned to REPO_URL and then written to $GITHUB_OUTPUT via the write_output helper function using `printf '%s\n' "$value"`. The value is never sanitized with `printf '%s' ... | tr -d '\n\r'` before the write. A caller can supply a newline-containing repo-url to inject arbitrary key=value pairs into GITHUB_OUTPUT.
+The 'Derive context' step writes the value of REPO_URL (sourced from inputs.repo-url via the INPUT_REPO_URL env var) to $GITHUB_OUTPUT using the write_output() helper. The helper uses a random heredoc delimiter to prevent key injection, but it does NOT sanitize the value with `printf '%s' ... | tr -d '\n\r'` before writing. An attacker-controlled inputs.repo-url containing embedded newlines could inject additional key=value pairs into $GITHUB_OUTPUT, potentially poisoning downstream steps.
+
+Offending pattern:
+  write_output "repo-url" "$REPO_URL"   # REPO_URL = inputs.repo-url, no tr -d newlines
 
 Locations:
 
-- `action.yml:92`
+- `action.yml:91`
 
 ## Iteration Notes
 
@@ -38,8 +45,11 @@ Locations:
 
 **Notes:**
 
-Fixed both github-env-injection findings in action.yml:
-1. 'Determine version' step (line ~50): Updated write_output helper to sanitize the value with `safe_value="$(printf '%s' "$value" | tr -d '\n\r')"` before writing to $GITHUB_OUTPUT, preventing newline injection via inputs.version.
-2. 'Derive context' step (line ~92): Same fix applied to the write_output helper in that step, preventing newline injection via inputs.repo-url.
-Both helpers now strip \n and \r from the value before the heredoc write, while preserving the random delimiter approach for key-name safety.
+Fixed two github-env-injection findings in action.yml:
+
+1. 'Determine version' step (line 49): Added `safe_value="$(printf '%s' "$value" | tr -d '\n\r')"` inside the write_output() helper and replaced `printf '%s\n' "$value"` with `printf '%s\n' "$safe_value"`. This sanitizes inputs.version before writing 'version' and 'tag' outputs to $GITHUB_OUTPUT.
+
+2. 'Derive context' step (line 91): Applied the same fix to the write_output() helper in that step, sanitizing inputs.repo-url before writing the 'repo-url' output to $GITHUB_OUTPUT.
+
+Both fixes strip embedded newlines and carriage returns from user-controlled values before they are written to $GITHUB_OUTPUT, preventing newline injection attacks that could poison downstream step outputs.
 
