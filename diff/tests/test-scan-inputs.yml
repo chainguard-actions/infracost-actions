@@ -18,7 +18,7 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          api-key: fake-api-key-for-input-coverage
+          api-key: fake-api-key-for-testing
           base-path: /tmp/base-checkout
           head-path: /tmp/head-checkout
           project: my-project
@@ -27,20 +27,15 @@ jobs:
           github-owner: example
           github-repo: repo
 
-      - name: Assert action covered scan inputs and failed gracefully
+      - name: Assert action ran (inputs accepted, failed gracefully without real API key/scanner)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action is expected to fail because:
-          # - The Infracost API key is fake (no real credentials)
-          # - The infracost-scanner binary may not be downloadable or will reject the key
-          # What matters is that the inputs (base-path, head-path, project, repo-url)
-          # were passed and the action ran (not skipped).
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded (scanner ran successfully)"
+            echo "PASS: action succeeded (unexpected but acceptable)"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully as expected with fake credentials"
+            echo "PASS: action failed gracefully as expected (no real Infracost API key or scanner binary)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
