@@ -69,9 +69,8 @@ runs:
           fi
           VERSION="${RELEASE#scanner/v}"
         fi
-        SAFE_VERSION="$(printf '%s' "$VERSION" | tr -d '\n\r')"
-        write_output "version" "$SAFE_VERSION"
-        write_output "tag" "scanner/v${SAFE_VERSION}"
+        write_output "version" "$VERSION"
+        write_output "tag" "scanner/v${VERSION}"
     - name: Download scanner
       shell: bash
       env:
@@ -123,8 +122,7 @@ runs:
           REPO_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
         fi
 
-        SAFE_REPO_URL="$(printf '%s' "$REPO_URL" | tr -d '\n\r')"
-        write_output "repo-url" "$SAFE_REPO_URL"
+        write_output "repo-url" "$REPO_URL"
     - name: Run scanner
       shell: bash
       env:
