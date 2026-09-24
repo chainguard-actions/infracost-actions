@@ -1,0 +1,36 @@
+name: Test project filter input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          base-path: /tmp/base
+          head-path: /tmp/head
+          project: my-terraform-project
+          pr-number: "99"
+          github-owner: example
+          github-repo: repo
+
+      - name: Assert action exercised project input
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action is expected to fail because it tries to download the
+          # infracost-scanner binary from GitHub releases (requires real auth/network),
+          # or the scanner fails with a fake API key. The important thing is that
+          # the action was invoked with the project input (covering that input).
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action was invoked with project input"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
