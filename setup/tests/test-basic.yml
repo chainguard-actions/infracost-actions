@@ -1,0 +1,31 @@
+name: Test basic Infracost setup
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          api-key: "test-api-key-for-ci"
+      - name: Assert infracost binary is installed
+        run: |
+          echo "Checking infracost binary..."
+          if ! command -v infracost &>/dev/null; then
+            echo "FAIL: infracost binary not found on PATH"
+            exit 1
+          fi
+          echo "PASS: infracost binary found at $(command -v infracost)"
+      - name: Assert infracost version output
+        run: |
+          echo "Checking infracost version..."
+          VERSION_OUTPUT=$(infracost --version 2>&1 || true)
+          echo "version output: $VERSION_OUTPUT"
+          if echo "$VERSION_OUTPUT" | grep -qiE 'infracost|v0\.'; then
+            echo "PASS: infracost version output looks correct"
+          else
+            echo "FAIL: unexpected version output: $VERSION_OUTPUT"
+            exit 1
+          fi

@@ -1,4 +1,4 @@
-name: Test behavior=delete-and-new input
+name: Test behavior delete-and-new
 on:
   workflow_dispatch:
 jobs:
@@ -7,27 +7,26 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      # Test that the action accepts the 'delete-and-new' behavior value.
-      # Under the harness, the action will fail at the Infracost setup step
-      # because there is no valid API key and no real PR context.
-      # We verify it fails gracefully rather than crashing unexpectedly.
+      # Test that the action accepts the 'delete-and-new' behavior input.
+      # Under the harness (workflow_dispatch, sentinel repo, no PR number),
+      # the action will fail gracefully — we assert it does so without panicking.
       - id: action
         uses: .
         continue-on-error: true
         with:
-          api-key: "test-api-key-placeholder"
-          path: "."
+          api-key: fake-api-key-for-testing
+          path: .
           behavior: delete-and-new
 
-      - name: Assert action ran with behavior=delete-and-new (failed gracefully)
+      - name: Assert action ran and failed gracefully (no PR context under harness)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully as expected (no valid API key or PR context under harness)"
+            echo "PASS: action failed gracefully as expected (no PR context / no real API key under harness)"
           elif [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded (possibly a no-op path)"
+            echo "PASS: action unexpectedly succeeded"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

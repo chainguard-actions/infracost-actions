@@ -1,0 +1,32 @@
+name: Test Infracost setup with custom currency
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          api-key: "test-api-key-for-ci"
+          currency: "EUR"
+      - name: Assert infracost binary is installed
+        run: |
+          echo "Checking infracost binary..."
+          if ! command -v infracost &>/dev/null; then
+            echo "FAIL: infracost binary not found on PATH"
+            exit 1
+          fi
+          echo "PASS: infracost binary found at $(command -v infracost)"
+      - name: Assert currency is configured as EUR
+        run: |
+          echo "Checking infracost currency configuration..."
+          CURRENCY_OUTPUT=$(infracost configure get currency 2>&1 || true)
+          echo "currency output: $CURRENCY_OUTPUT"
+          if echo "$CURRENCY_OUTPUT" | grep -q "EUR"; then
+            echo "PASS: currency is configured as EUR"
+          else
+            echo "FAIL: expected currency EUR but got: $CURRENCY_OUTPUT"
+            exit 1
+          fi

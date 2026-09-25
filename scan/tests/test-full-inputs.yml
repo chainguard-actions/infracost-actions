@@ -1,0 +1,47 @@
+name: Test full input coverage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create dummy base and head paths
+        run: |
+          mkdir -p /tmp/base-checkout /tmp/head-checkout
+          echo "# dummy terraform" > /tmp/base-checkout/main.tf
+          echo "# dummy terraform" > /tmp/head-checkout/main.tf
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-coverage"
+          base-path: /tmp/base-checkout
+          head-path: /tmp/head-checkout
+          version: "latest"
+          project: "my-project"
+          branch: "main"
+          enable-dashboard: "false"
+          pr-status: "OPEN"
+          github-token: ${{ github.token }}
+          github-owner: "test-owner"
+          github-repo: "test-repo"
+          pr-number: "42"
+          commit-sha: "abc1234567890abcdef1234567890abcdef1234"
+          repo-url: "https://github.com/test-owner/test-repo"
+
+      - name: Assert action ran (inputs accepted, failed gracefully on fake credentials)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake api-key / sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -78,7 +78,7 @@ runs:
         #   new - Create a new cost estimate comment on every push.
         # See https://www.infracost.io/docs/features/cli_commands/#comment-on-pull-requests for other options.
         infracost comment github --path=/tmp/infracost.json \
-                                 --repo="$GITHUB_REPOSITORY" \
+                                 --repo=$GITHUB_REPOSITORY \
                                  --github-token="$GITHUB_TOKEN_VAL" \
                                  --pull-request="$PR_NUMBER" \
                                  --behavior="$BEHAVIOR"
