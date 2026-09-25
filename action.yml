@@ -38,13 +38,13 @@ runs:
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     # Checkout the branch you want Infracost to compare costs against, most commonly the target branch.
     - name: Checkout base branch
-      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      uses: chainguard-actions/actions-checkout@59b7218bfc2eaabc464f1254f6e1dac5bda91d94 # v4
       with:
         ref: '${{ github.event.pull_request.base.ref }}'
     # Install the Infracost CLI, see https://github.com/infracost/actions/tree/master/setup
     # for other inputs such as version, and pricing-api-endpoint (for self-hosted users).
     - name: Setup Infracost
-      uses: infracost/actions/setup@e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3
+      uses: chainguard-actions/infracost-actions/setup@a131e514a46a6d10978192745c024a9701678205 # v3
       with:
         api-key: ${{ inputs.api_key }}
     # Generate an Infracost output JSON from the comparison branch, so that Infracost can compare the cost difference.
@@ -55,7 +55,7 @@ runs:
                             --format=json \
                             --out-file=/tmp/infracost-base.json
     # Checkout the PR branch with your infrastructure changes.
-    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+    - uses: chainguard-actions/actions-checkout@59b7218bfc2eaabc464f1254f6e1dac5bda91d94 # v4
     - name: Run Infracost
       shell: bash
       run: |
@@ -66,7 +66,7 @@ runs:
     - name: Post Infracost comment
       shell: bash
       env:
-        GITHUB_TOKEN_VAL: ${{ github.token }}
+        GITHUB_TOKEN_VALUE: ${{ github.token }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
         BEHAVIOR: ${{ inputs.behavior }}
       run: |
@@ -78,7 +78,7 @@ runs:
         #   new - Create a new cost estimate comment on every push.
         # See https://www.infracost.io/docs/features/cli_commands/#comment-on-pull-requests for other options.
         infracost comment github --path=/tmp/infracost.json \
-                                 --repo=$GITHUB_REPOSITORY \
-                                 --github-token="$GITHUB_TOKEN_VAL" \
+                                 --repo="$GITHUB_REPOSITORY" \
+                                 --github-token="$GITHUB_TOKEN_VALUE" \
                                  --pull-request="$PR_NUMBER" \
                                  --behavior="$BEHAVIOR"
