@@ -16,7 +16,7 @@ Action **infracost--actions/scanner/v0.2.2** was hardened automatically. 4 findi
 
 ### unpinned-uses (severity: high)
 
-action.yml uses tag-based (non-SHA-pinned) action references: `actions/checkout@v4` (appears twice) and `infracost/actions/setup@v3`. These should be pinned to full 40-character commit SHAs to prevent supply-chain attacks via mutable tags.
+action.yml uses actions/checkout@v4 (twice) and infracost/actions/setup@v3 — all pinned to mutable version tags rather than full 40-character commit SHAs. A tag can be moved to point to a different (potentially malicious) commit at any time.
 
 Locations:
 
@@ -26,103 +26,49 @@ Locations:
 
 ### script-injection (severity: high)
 
-Sub-rule (a): Multiple `run:` blocks directly interpolate `${{ }}` expressions into shell command strings, enabling script injection. An attacker-controlled value (e.g. a PR title, branch name, or input) can break out of the shell context and execute arbitrary commands.
+Sub-rule (a): ${{ ... }} expressions are interpolated directly inside run: shell command strings, allowing an attacker to inject arbitrary shell commands via PR metadata or action inputs.
 
-In `action.yml` (Post Infracost comment step, ~line 66):
-  `--github-token=${{github.token}}` 
-  `--pull-request=${{github.event.pull_request.number}}`
-  `--behavior=${{inputs.behavior}}`
+action.yml 'Post Infracost comment' step: `--github-token=${{github.token}}`, `--pull-request=${{github.event.pull_request.number}}`, and `--behavior=${{inputs.behavior}}` are all interpolated directly into the shell command without going through an env: variable.
 
-In `diff/action.yml` (Derive context step, ~line 91):
-  `OWNER="${{ inputs.github-owner }}"`
-  `REPO="${{ inputs.github-repo }}"`
-  `PR="${{ inputs.pr-number }}"`
-  `REPO_URL="${{ inputs.repo-url }}"`
-  `PR_STATUS="${{ inputs.pr-status }}"`
-  `PR="${{ github.event.pull_request.number }}"`
-  `PR_TITLE="${{ github.event.pull_request.title }}"`
-  `PR_AUTHOR="${{ github.event.pull_request.user.login }}"`
-  `PR_LABELS=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | ...)`
-  `if [ "${{ github.event_name }}" = "pull_request" ]`
-  `case "${{ github.event.action }}" in`
-  `if [ "${{ github.event.pull_request.merged }}" = "true" ]`
-  `if [ -z "${{ inputs.base-path }}" ] || [ -z "${{ inputs.head-path }}" ]`
+diff/action.yml 'Derive context' step: `${{ inputs.github-owner }}`, `${{ inputs.github-repo }}`, `${{ inputs.pr-number }}`, `${{ inputs.repo-url }}`, `${{ inputs.pr-status }}`, `${{ github.event.pull_request.number }}`, `${{ github.event.pull_request.title }}`, `${{ github.event.pull_request.user.login }}`, `${{ toJson(github.event.pull_request.labels.*.name) }}`, `${{ github.event_name }}`, `${{ github.event.action }}`, `${{ github.event.pull_request.merged }}`, `${{ inputs.base-path }}`, `${{ inputs.head-path }}` are all interpolated directly into the run: block.
 
-In `diff/action.yml` (Run scanner step, ~line 155):
-  `if [ -z "${{ inputs.base-path }}" ] || [ -z "${{ inputs.head-path }}" ]`
-  `--base-path "${{ inputs.base-path }}"`
-  `--head-path "${{ inputs.head-path }}"`
-  `--github-owner "${{ steps.context.outputs.owner }}"`
-  `--github-repo "${{ steps.context.outputs.repo }}"`
-  `--pr-number "${{ steps.context.outputs.pr }}"`
-  `--repo-url "${{ steps.context.outputs.repo-url }}"`
-  `--pr-title "${{ steps.context.outputs.pr-title }}"`
-  `--pr-author "${{ steps.context.outputs.pr-author }}"`
-  `--pr-labels "${{ steps.context.outputs.pr-labels }}"`
-  `--pipeline-run-id "${{ steps.context.outputs.pipeline-run-id }}"`
-  `if [ -n "${{ inputs.project }}" ]`
-  `ARGS+=(--project "${{ inputs.project }}")`
+diff/action.yml 'Run scanner' step: `${{ inputs.base-path }}`, `${{ inputs.head-path }}`, `${{ steps.context.outputs.owner }}`, `${{ steps.context.outputs.repo }}`, `${{ steps.context.outputs.pr }}`, `${{ steps.context.outputs.repo-url }}`, `${{ steps.context.outputs.pr-title }}`, `${{ steps.context.outputs.pr-author }}`, `${{ steps.context.outputs.pr-labels }}`, `${{ steps.context.outputs.pipeline-run-id }}`, `${{ inputs.project }}` are all interpolated directly.
 
-In `diff/action.yml` (Update PR status step, ~line 185):
-  `--repo-url "${{ steps.context.outputs.repo-url }}"`
-  `--pr-number "${{ steps.context.outputs.pr }}"`
-  `--status "${{ steps.context.outputs.pr-status }}"`
+diff/action.yml 'Update PR status' step: `${{ steps.context.outputs.repo-url }}`, `${{ steps.context.outputs.pr }}`, `${{ steps.context.outputs.pr-status }}` are all interpolated directly.
 
-In `scan/action.yml` (Derive context step, ~line 76):
-  `REPO_URL="${{ inputs.repo-url }}"`
+scan/action.yml 'Derive context' step: `${{ inputs.repo-url }}` is interpolated directly.
 
-In `scan/action.yml` (Run scanner step, ~line 86):
-  `--path "${{ inputs.path }}"`
-  `--repo-url "${{ steps.context.outputs.repo-url }}"`
-  `if [ -n "${{ inputs.project }}" ]`
-  `ARGS+=(--project "${{ inputs.project }}")`
-
-All these should be moved to `env:` variables and referenced as `"$VAR"` in the shell.
+scan/action.yml 'Run scanner' step: `${{ inputs.path }}`, `${{ steps.context.outputs.repo-url }}`, `${{ inputs.project }}` are all interpolated directly.
 
 Locations:
 
-- `action.yml:66`
-- `diff/action.yml:91`
-- `diff/action.yml:155`
-- `diff/action.yml:185`
-- `scan/action.yml:76`
-- `scan/action.yml:86`
+- `action.yml:68`
+- `diff/action.yml:90`
+- `diff/action.yml:152`
+- `diff/action.yml:178`
+- `scan/action.yml:74`
+- `scan/action.yml:83`
 
 ### github-env-injection (severity: high)
 
-Multiple `run:` blocks write values derived from untrusted inputs (`inputs.*`, `github.*`, `steps.*.outputs.*`) to `$GITHUB_OUTPUT` and `$GITHUB_PATH` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). An attacker can inject newlines into these values to smuggle additional key=value pairs into the environment files.
+Untrusted values derived from github context and inputs are written to $GITHUB_OUTPUT without sanitization (no `printf '%s' ... | tr -d '\n\r'` step).
 
-In `diff/action.yml` (Determine version step): writes `${VERSION}` (sourced from `${{ inputs.version }}` via env) to `$GITHUB_OUTPUT` without sanitization.
+diff/action.yml 'Derive context' step: PR_TITLE is set from `${{ github.event.pull_request.title }}` (attacker-controlled PR title), PR_AUTHOR from `${{ github.event.pull_request.user.login }}`, and PR_LABELS from `${{ toJson(github.event.pull_request.labels.*.name) }}`. All three are then written directly to $GITHUB_OUTPUT via `echo "pr-title=${PR_TITLE}" >> $GITHUB_OUTPUT`, etc., without sanitization. A newline embedded in the PR title or author login could inject arbitrary key=value pairs into GITHUB_OUTPUT, poisoning subsequent steps.
 
-In `diff/action.yml` (Download scanner step): writes `${RUNNER_TEMP}` to `$GITHUB_PATH` — while RUNNER_TEMP is a runner-set variable, the step also uses `$VERSION` and `$TAG` from inputs/steps outputs.
+Additionally, OWNER, REPO, PR, REPO_URL, and PR_STATUS are set from inputs (e.g. `${{ inputs.github-owner }}`, `${{ inputs.pr-number }}`) and written to $GITHUB_OUTPUT without sanitization.
 
-In `diff/action.yml` (Derive context step): writes `OWNER`, `REPO`, `PR`, `REPO_URL`, `PR_TITLE`, `PR_AUTHOR`, `PR_LABELS`, `MODE`, `PR_STATUS` — all derived from `inputs.*` and `github.*` expressions — to `$GITHUB_OUTPUT` without sanitization. Notably `PR_TITLE` (`github.event.pull_request.title`) and `PR_AUTHOR` (`github.event.pull_request.user.login`) are fully attacker-controlled.
-
-In `scan/action.yml` (Determine version step): writes `${VERSION}` (from `${{ inputs.version }}`) to `$GITHUB_OUTPUT` without sanitization.
-
-In `scan/action.yml` (Download scanner step): writes `${RUNNER_TEMP}` to `$GITHUB_PATH`.
-
-In `scan/action.yml` (Derive context step): writes `REPO_URL` (derived from `${{ inputs.repo-url }}`) to `$GITHUB_OUTPUT` without sanitization.
+scan/action.yml 'Derive context' step: REPO_URL is set from `${{ inputs.repo-url }}` and written to $GITHUB_OUTPUT via `echo "repo-url=${REPO_URL}" >> $GITHUB_OUTPUT` without sanitization.
 
 Locations:
 
-- `diff/action.yml:57`
-- `diff/action.yml:58`
-- `diff/action.yml:84`
-- `diff/action.yml:131`
-- `diff/action.yml:132`
-- `diff/action.yml:133`
-- `diff/action.yml:134`
-- `diff/action.yml:135`
-- `diff/action.yml:136`
-- `diff/action.yml:137`
-- `diff/action.yml:138`
-- `diff/action.yml:139`
-- `diff/action.yml:140`
-- `scan/action.yml:43`
-- `scan/action.yml:44`
-- `scan/action.yml:70`
-- `scan/action.yml:80`
+- `diff/action.yml:118`
+- `diff/action.yml:119`
+- `diff/action.yml:120`
+- `diff/action.yml:121`
+- `diff/action.yml:122`
+- `diff/action.yml:123`
+- `diff/action.yml:124`
+- `scan/action.yml:79`
 
 ### static-inline-injection (severity: high)
 
@@ -140,26 +86,22 @@ Locations:
 
 **Notes:**
 
-Fixed all four findings across three files:
+Fixed all four findings across action.yml, diff/action.yml, and scan/action.yml:
 
-1. **action.yml** (unpinned-uses + script-injection + static-inline-injection):
-   - Pinned `actions/checkout@v4` → `@11d5960a326750d5838078e36cf38b85af677262 # v4` (both occurrences)
-   - Pinned `infracost/actions/setup@v3` → `@e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832 # v3`
-   - Moved `${{github.token}}`, `${{github.event.pull_request.number}}`, and `${{inputs.behavior}}` from the `run:` block to `env:` variables (`GITHUB_TOKEN_VALUE`, `PR_NUMBER`, `BEHAVIOR`)
+1. unpinned-uses: Pinned actions/checkout@v4 (×2) to SHA 11d5960a326750d5838078e36cf38b85af677262 and infracost/actions/setup@v3 to SHA e9d6e6cd65e168e76b0de50ff9957d2fe8bb1832, preserving tag comments.
 
-2. **diff/action.yml** (script-injection + github-env-injection):
-   - Moved all `${{ inputs.* }}` and `${{ github.* }}` expressions from `run:` blocks to `env:` blocks in Derive context, Run scanner, and Update PR status steps
-   - Added `printf '%s' ... | tr -d '\n\r'` sanitization for all values written to $GITHUB_OUTPUT (version, tag, owner, repo, pr, repo-url, pr-title, pr-author, pr-labels, pipeline-run-id, mode, pr-status) and $GITHUB_PATH (RUNNER_TEMP)
+2. script-injection / static-inline-injection: Moved all ${{ }} expressions out of run: shell strings into env: blocks in all affected steps (action.yml 'Post Infracost comment'; diff/action.yml 'Derive context', 'Run scanner', 'Update PR status'; scan/action.yml 'Derive context', 'Run scanner'). All values are now referenced as plain $ENV_VAR shell variables.
 
-3. **scan/action.yml** (script-injection + github-env-injection):
-   - Moved `${{ inputs.repo-url }}`, `${{ inputs.path }}`, `${{ inputs.project }}`, and `${{ steps.context.outputs.repo-url }}` from `run:` blocks to `env:` blocks
-   - Added `printf '%s' ... | tr -d '\n\r'` sanitization for values written to $GITHUB_OUTPUT (version, tag, repo-url) and $GITHUB_PATH (RUNNER_TEMP)
+3. github-env-injection: Added printf '%s' "$VAR" | tr -d '\n\r' sanitization before every echo >> "$GITHUB_OUTPUT" write in diff/action.yml 'Derive context' (10 outputs) and scan/action.yml 'Derive context' (1 output). Also quoted $GITHUB_OUTPUT references throughout.
 
 ### Iteration 2
 
-**Fixes applied:** script-injection
+**Fixes applied:** github-env-injection
 
 **Notes:**
 
-Fixed unquoted `$GITHUB_REPOSITORY` expansion in the 'Post Infracost comment' step of action.yml. Changed `--repo=$GITHUB_REPOSITORY` to `--repo="$GITHUB_REPOSITORY"` to prevent shell metacharacter injection. This is consistent with how the other environment variables in the same infracost command are already properly double-quoted.
+Fixed github-env-injection in two files:
+1. hardened/action/diff/action.yml: Added `safe_version=$(printf '%s' "$VERSION" | tr -d '\n\r')` before writing to GITHUB_OUTPUT, replacing bare `${VERSION}` with `${safe_version}` in both echo statements.
+2. hardened/action/scan/action.yml: Same fix applied — sanitize VERSION with printf/tr before writing version and tag outputs to GITHUB_OUTPUT.
+Both files also had $GITHUB_OUTPUT quoted properly.
 

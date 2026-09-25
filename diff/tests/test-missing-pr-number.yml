@@ -1,4 +1,4 @@
-name: Test behavior=delete-and-new
+name: Test missing PR number error
 on:
   workflow_dispatch:
 jobs:
@@ -7,24 +7,24 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Invoke Infracost action with behavior=delete-and-new (expected to fail gracefully without real API key and PR context)
-        id: action
+      - id: action
         uses: .
         continue-on-error: true
         with:
-          api-key: fake-api-key-for-testing
-          path: .
-          behavior: delete-and-new
+          api-key: fake-api-key
+          # No pr-number provided and workflow_dispatch has no PR context
+          # The action should fail with "Could not determine PR number"
 
-      - name: Assert action ran and failed gracefully
+      - name: Assert action failed with missing PR number error
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully as expected (no real API key or PR context)"
+            echo "PASS: action correctly failed when PR number could not be determined"
           elif [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded unexpectedly"
+            echo "FAIL: action should have failed without a PR number"
+            exit 1
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

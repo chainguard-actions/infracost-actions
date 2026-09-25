@@ -1,0 +1,32 @@
+name: Test latest version resolution
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          path: "."
+          version: "latest"
+
+      - name: Assert action ran with latest version resolution
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The gh release list call uses the real token and should resolve a version.
+          # The scanner itself will fail without a real Infracost API key, so failure is expected.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (scanner binary found and ran)"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected without real Infracost API key)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

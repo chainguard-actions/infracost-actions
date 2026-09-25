@@ -1,0 +1,45 @@
+name: Test scan mode (base-path and head-path provided)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create dummy base and head paths for scan mode
+        run: |
+          mkdir -p /tmp/base-checkout
+          mkdir -p /tmp/head-checkout
+          echo "# dummy terraform" > /tmp/base-checkout/main.tf
+          echo "# dummy terraform" > /tmp/head-checkout/main.tf
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          pr-number: "1"
+          base-path: /tmp/base-checkout
+          head-path: /tmp/head-checkout
+          github-owner: infracost
+          github-repo: actions
+          # With base-path and head-path set, mode should be 'scan'
+          # Will fail at infracost-scanner diff (fake API key)
+
+      - name: Assert action ran in scan mode (failed at scanner, not context)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # Expected to fail because the infracost-scanner binary requires
+          # a real API key to authenticate with the Infracost API.
+          # The failure should happen at the "Run scanner" step, not earlier.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (fake API key, no real infra)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

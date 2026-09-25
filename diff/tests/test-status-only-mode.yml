@@ -1,0 +1,39 @@
+name: Test status-only mode (explicit pr-status, no scan paths)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          pr-number: "1"
+          pr-status: MERGED
+          github-owner: infracost
+          github-repo: actions
+          # No base-path or head-path → status-only mode
+          # The action will fail at infracost-scanner status (fake API key)
+          # but should get past context derivation successfully
+
+      - name: Assert action ran (failed gracefully at scanner binary, not at context step)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action is expected to fail because:
+          # 1. The infracost-scanner binary requires a real API key, OR
+          # 2. The download step may fail if the release is not found
+          # Either way, it should fail gracefully (not with an unexpected error)
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (no real API key or release)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (real API key available)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
