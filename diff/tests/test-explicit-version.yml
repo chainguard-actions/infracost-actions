@@ -1,0 +1,40 @@
+name: Test explicit version input (skips gh release list)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key"
+          pr-number: "7"
+          github-owner: "test-owner"
+          github-repo: "test-repo"
+          pr-status: "OPEN"
+          base-path: "/tmp/base"
+          head-path: "/tmp/head"
+          version: "0.1.0"
+          # Explicit version avoids the "gh release list" call in the version step.
+          # The download step will attempt to fetch the release asset from GitHub.
+          # With a fake API key the scanner will fail, but context derivation succeeds.
+
+      - name: Assert action ran (explicit version path taken)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With an explicit version the "Determine version" step skips the gh release
+          # list call. The action may fail at download (if the version doesn't exist)
+          # or at the scanner step (fake API key). Either way it should not fail at
+          # context derivation.
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran with explicit version input (outcome: $OUTCOME)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

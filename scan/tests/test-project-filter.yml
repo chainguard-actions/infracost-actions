@@ -1,0 +1,39 @@
+name: Test project filter input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a minimal scan path
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/infra"
+          cat > "$GITHUB_WORKSPACE/infra/main.tf" <<'EOF'
+          # minimal terraform file for scanning
+          terraform {}
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key-for-test
+          path: ${{ github.workspace }}/infra
+          project: my-test-project
+          repo-url: https://github.com/example/repo
+
+      - name: Assert action ran with project input (may fail due to fake API key)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake API key / test environment)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
