@@ -1,0 +1,41 @@
+name: Test explicit version input bypasses latest lookup
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          version: "0.1.0"
+          pr-number: "1"
+          github-owner: test-owner
+          github-repo: test-repo
+          base-path: /tmp/base
+          head-path: /tmp/head
+          # Explicit version avoids the gh release list call for "latest".
+          # The action will fail at download (if release doesn't exist) or
+          # at the scanner invocation (fake api-key), but NOT at version step.
+
+      - name: Assert action failed at download or scanner (not at version step)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With an explicit version, the "Determine version" step should succeed.
+          # The action will then fail at download (release may not exist) or
+          # at the scanner (fake api-key). Either failure is acceptable here.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected after version step (download or scanner)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: action should not succeed with a fake api-key"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

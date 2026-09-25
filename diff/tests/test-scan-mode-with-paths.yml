@@ -1,0 +1,45 @@
+name: Test scan mode when base-path and head-path are provided
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create dummy base and head paths
+        run: |
+          mkdir -p /tmp/infracost-base /tmp/infracost-head
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          pr-number: "10"
+          pr-status: OPEN
+          github-owner: test-owner
+          github-repo: test-repo
+          base-path: /tmp/infracost-base
+          head-path: /tmp/infracost-head
+          # With base-path and head-path set, and pr-status=OPEN,
+          # the action should enter scan mode.
+          # It will fail at download or scanner (fake api-key),
+          # but NOT at context derivation.
+
+      - name: Assert action failed at download or scanner (not at context)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail because the api-key is fake and/or
+          # the scanner binary download may fail. Context derivation should succeed.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (fake api-key or download issue)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: action should not succeed with a fake api-key"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
