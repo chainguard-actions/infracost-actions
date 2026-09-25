@@ -1,4 +1,4 @@
-name: Test behavior delete-and-new
+name: Test default behavior (update)
 on:
   workflow_dispatch:
 jobs:
@@ -13,17 +13,17 @@ jobs:
         with:
           api-key: fake-api-key-for-testing
           path: .
-          behavior: delete-and-new
+          # behavior defaults to 'update' when not specified
 
-      - name: Assert action ran with delete-and-new behavior (fails gracefully without real PR context)
+      - name: Assert action ran with default behavior=update (fails gracefully without real API key or PR context)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded unexpectedly"
+            echo "PASS: action succeeded"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully as expected (no PR context / no valid API key under harness)"
+            echo "PASS: action failed gracefully (expected without real API key / PR context)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

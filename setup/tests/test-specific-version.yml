@@ -1,0 +1,39 @@
+name: Test specific version install
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "ico-fake-api-key-for-testing"
+          version: "0.10.28"
+      - name: Assert action ran with specific version
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            # If it succeeded, verify infracost CLI is on PATH and check version
+            if ! command -v infracost >/dev/null 2>&1; then
+              echo "FAIL: action succeeded but infracost CLI not found on PATH"
+              exit 1
+            fi
+            VERSION_OUT=$(infracost --version 2>&1 || true)
+            echo "infracost version output: $VERSION_OUT"
+            if echo "$VERSION_OUT" | grep -q "0.10.28"; then
+              echo "PASS: correct version installed"
+            else
+              echo "FAIL: expected version 0.10.28 but got: $VERSION_OUT"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake API key)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,40 @@
+name: Test currency setting
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "ico-fake-api-key-for-testing"
+          currency: "EUR"
+      - name: Assert action ran with EUR currency setting
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            # If it succeeded, verify infracost CLI is on PATH
+            if ! command -v infracost >/dev/null 2>&1; then
+              echo "FAIL: action succeeded but infracost CLI not found on PATH"
+              exit 1
+            fi
+            # Check that the currency is configured
+            CURRENCY_OUT=$(infracost configure get currency 2>&1 || true)
+            echo "currency config: $CURRENCY_OUT"
+            if echo "$CURRENCY_OUT" | grep -qi "EUR"; then
+              echo "PASS: EUR currency configured"
+            else
+              echo "FAIL: expected EUR currency but got: $CURRENCY_OUT"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake API key)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

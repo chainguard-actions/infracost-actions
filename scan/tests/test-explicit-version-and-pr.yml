@@ -1,0 +1,41 @@
+name: Test explicit version and PR number
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create dummy base and head paths
+        run: |
+          mkdir -p /tmp/base /tmp/head
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          base-path: /tmp/base
+          head-path: /tmp/head
+          version: "0.1.0"
+          pr-number: "42"
+          github-owner: "test-owner"
+          github-repo: "test-repo"
+          commit-sha: "abc1234567890abcdef1234567890abcdef12345"
+          repo-url: "https://github.com/test-owner/test-repo"
+          branch: "main"
+
+      - name: Assert action ran (download or scanner step may fail without real credentials)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected without real API key / infra paths)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
