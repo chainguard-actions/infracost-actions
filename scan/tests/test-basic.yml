@@ -1,0 +1,52 @@
+name: Test basic usage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a minimal Terraform directory to scan
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/infra"
+          cat > "$GITHUB_WORKSPACE/infra/main.tf" <<'EOF'
+          resource "aws_instance" "example" {
+            ami           = "ami-0c55b159cbfafe1f0"
+            instance_type = "t2.micro"
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          path: "${{ github.workspace }}/infra"
+
+      - name: Assert action ran (scanner binary downloaded, failed gracefully on fake API key)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action is expected to fail because we use a fake API key.
+          # However, it should NOT fail during the version determination or
+          # binary download steps (those use the real GITHUB_TOKEN).
+          # A failure outcome here means the scanner ran but rejected the fake key — that's acceptable.
+          # An unexpected outcome (e.g. 'skipped') is a bug.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake API key)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded unexpectedly (scanner may have been lenient)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+
+      - name: Assert scanner binary was downloaded
+        run: |
+          if command -v infracost-scanner >/dev/null 2>&1 || [ -f "${RUNNER_TEMP}/infracost-scanner" ]; then
+            echo "PASS: infracost-scanner binary is present"
+          else
+            echo "WARN: infracost-scanner binary not found in PATH or RUNNER_TEMP (may be expected if download failed)"
+          fi

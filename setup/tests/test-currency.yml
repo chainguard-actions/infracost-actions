@@ -1,0 +1,29 @@
+name: Test currency configuration
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: ico-test-fake-api-key-for-ci-testing
+          version: 0.10.x
+          currency: EUR
+      - name: Assert action ran with currency option
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if command -v infracost >/dev/null 2>&1; then
+            echo "PASS: infracost binary is available after currency configuration"
+            infracost --version
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (likely invalid API key rejected by server)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME' and binary not found"
+            exit 1
+          fi

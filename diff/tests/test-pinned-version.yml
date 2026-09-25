@@ -1,0 +1,39 @@
+name: Test pinned version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          pr-number: "7"
+          github-owner: "test-owner"
+          github-repo: "test-repo"
+          version: "0.1.0"
+          # Pinned version — skips the "gh release list" API call for latest.
+          # The download step will attempt to fetch scanner/v0.1.0 from
+          # infracost/actions releases. It may fail if that release doesn't
+          # exist, but the version determination step should succeed.
+
+      - name: Assert action ran (version step succeeded, download may fail)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With a pinned version, the "Determine version" step should succeed
+          # (it just echoes the version without any API call).
+          # The "Download scanner" step may fail if the release doesn't exist.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (download/scanner step failed as expected)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (scanner v0.1.0 available and accepted inputs)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

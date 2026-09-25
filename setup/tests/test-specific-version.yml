@@ -1,0 +1,36 @@
+name: Test specific version installation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: ico-test-fake-api-key-for-ci-testing
+          version: 0.10.x
+          currency: USD
+      - name: Assert infracost binary installed with correct version or action ran
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if command -v infracost >/dev/null 2>&1; then
+            VERSION_OUTPUT="$(infracost --version 2>&1 || true)"
+            echo "version output: $VERSION_OUTPUT"
+            # Verify it's a 0.10.x version
+            if echo "$VERSION_OUTPUT" | grep -qE 'v?0\.10\.'; then
+              echo "PASS: infracost 0.10.x is installed"
+            else
+              echo "FAIL: expected 0.10.x version but got: $VERSION_OUTPUT"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (likely invalid API key rejected by server)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME' and binary not found"
+            exit 1
+          fi

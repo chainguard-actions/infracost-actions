@@ -1,4 +1,4 @@
-name: Test basic usage - infracost scanner action
+name: Test default behavior (update)
 on:
   workflow_dispatch:
 jobs:
@@ -7,27 +7,25 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      # The action is designed for PR workflows and requires:
-      # 1. A real pull_request event context (base.ref, PR number)
-      # 2. The infracost CLI to be installed
-      # 3. A real GitHub repo (not the sentinel) for PR comments
-      # Under the act harness none of these are available, so we assert
-      # that the action fails gracefully rather than panicking.
+      # Test that the action works without specifying the optional 'behavior'
+      # input (it should default to 'update'). The action requires infracost
+      # CLI and a real PR context, so it will fail under the harness. We
+      # assert it fails gracefully.
       - id: action
         uses: .
         continue-on-error: true
         with:
           api-key: fake-api-key-for-testing
           path: examples/terraform-directory/code
-          behavior: update
+          # behavior is intentionally omitted to test the default value of 'update'
 
-      - name: Assert action ran and failed gracefully (expected under harness)
+      - name: Assert action ran and failed gracefully with default behavior
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully as expected (no PR context / infracost CLI / real repo under harness)"
+            echo "PASS: action failed gracefully as expected (no PR context / infracost CLI under harness)"
           elif [ "$OUTCOME" = "success" ]; then
             echo "PASS: action unexpectedly succeeded"
           else

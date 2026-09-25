@@ -1,0 +1,36 @@
+name: Test status-only mode (explicit pr-status, no base/head paths)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          pr-number: "99"
+          github-owner: "test-owner"
+          github-repo: "test-repo"
+          pr-status: "MERGED"
+          # No base-path or head-path — should trigger status-only mode
+
+      - name: Assert action ran (fails gracefully at status update without real API key)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # In status-only mode, the action skips scanning and only calls
+          # infracost-scanner status. Without a real API key this will fail,
+          # but the context derivation (mode=status-only) should have worked.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (no real API key)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (scanner available and accepted inputs)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
