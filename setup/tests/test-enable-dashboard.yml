@@ -1,0 +1,32 @@
+name: Test enable dashboard option
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: setup
+        uses: .
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY || 'ico-test-key-placeholder' }}
+          enable-dashboard: 'true'
+      - name: Assert infracost binary is available
+        run: |
+          echo "Checking infracost binary..."
+          if ! command -v infracost &>/dev/null; then
+            echo "FAIL: infracost binary not found in PATH"
+            exit 1
+          fi
+          echo "PASS: infracost binary found at $(command -v infracost)"
+      - name: Assert dashboard is enabled in configuration
+        run: |
+          echo "Checking infracost dashboard configuration..."
+          DASHBOARD=$(infracost configure get enable_dashboard 2>&1 || true)
+          echo "enable_dashboard: $DASHBOARD"
+          if [ "$DASHBOARD" = "true" ]; then
+            echo "PASS: dashboard is enabled"
+          else
+            echo "FAIL: expected enable_dashboard=true but got: $DASHBOARD"
+            exit 1
+          fi

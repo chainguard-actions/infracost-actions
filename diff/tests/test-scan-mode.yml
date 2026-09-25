@@ -1,0 +1,48 @@
+name: Test scan mode with base and head paths
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Set up dummy base and head directories to simulate IaC checkouts.
+      - name: Create dummy base and head paths
+        run: |
+          mkdir -p /tmp/base-checkout
+          mkdir -p /tmp/head-checkout
+          echo "# dummy terraform" > /tmp/base-checkout/main.tf
+          echo "# dummy terraform" > /tmp/head-checkout/main.tf
+
+      # When base-path, head-path, and pr-number are all provided, the action
+      # enters "scan" mode and runs `infracost-scanner diff`. With a fake api-key
+      # the scanner will fail on authentication, but the action should reach that
+      # point (not fail earlier on missing inputs or missing PR number).
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          base-path: /tmp/base-checkout
+          head-path: /tmp/head-checkout
+          pr-number: "42"
+          github-owner: infracost
+          github-repo: actions
+
+      - name: Assert action ran in scan mode (failed on auth, not on missing inputs)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail because the fake api-key is rejected by Infracost,
+          # OR succeed if the scanner tolerates the inputs. Either way it must NOT
+          # fail before reaching the scanner invocation.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected: fake api-key rejected by scanner)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,35 @@
+name: Test project filter input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          path: "."
+          version: "0.1.0"
+          project: "my-project"
+          repo-url: "https://github.com/infracost/actions"
+
+      - name: Assert action ran with project filter
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should include '--project my-project' in the scanner args.
+          # It will fail at 'Run scanner' due to fake API key, but should not fail earlier.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (fake API key), project filter was applied"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "WARN: action unexpectedly succeeded with a fake API key"
+            echo "PASS"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

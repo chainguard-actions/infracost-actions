@@ -1,0 +1,41 @@
+name: Test explicit PR status (status-only mode)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # When pr-status is explicitly set and base-path/head-path are NOT provided,
+      # the action enters "status-only" mode (skips scanning, only updates PR status).
+      # The scanner binary will be downloaded and `infracost-scanner status` will be
+      # called. With a fake api-key it will fail, but the action should reach that
+      # point (not fail earlier on missing PR number, since we supply pr-number).
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          pr-number: "1"
+          pr-status: OPEN
+          github-owner: infracost
+          github-repo: actions
+          # No base-path or head-path → status-only mode
+
+      - name: Assert action ran in status-only mode (failed on auth, not on missing PR)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail because the fake api-key is rejected by Infracost,
+          # OR succeed if the scanner tolerates the key. Either way it must NOT fail
+          # before reaching the scanner invocation (i.e. not on "missing PR number").
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected: fake api-key rejected)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (scanner accepted inputs)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

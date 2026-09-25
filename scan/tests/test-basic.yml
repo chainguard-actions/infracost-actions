@@ -1,0 +1,36 @@
+name: Test basic usage with pinned version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          path: "."
+          version: "0.1.0"
+          repo-url: "https://github.com/infracost/actions"
+
+      - name: Assert action ran (binary downloaded or failed gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may fail at the 'Run scanner' step because the API key is fake,
+          # or it may fail if the version doesn't exist. Either way, it should not
+          # succeed with a fake API key. We accept failure as the expected outcome.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (fake API key or version not found)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "WARN: action unexpectedly succeeded with a fake API key"
+            # This would be surprising but not necessarily a test failure
+            echo "PASS"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

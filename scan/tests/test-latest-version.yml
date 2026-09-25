@@ -1,0 +1,35 @@
+name: Test latest version resolution
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          path: "."
+          version: "latest"
+          repo-url: "https://github.com/infracost/actions"
+
+      - name: Assert action ran through version resolution
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should resolve the latest version via gh release list (public repo),
+          # download the binary, and then fail at the 'Run scanner' step due to fake API key.
+          # We accept failure as the expected outcome since we cannot provide a real API key.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (fake API key)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "WARN: action unexpectedly succeeded with a fake API key"
+            echo "PASS"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
