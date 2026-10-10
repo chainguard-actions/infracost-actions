@@ -1,0 +1,38 @@
+name: Test scan mode fails when base-path and head-path are missing
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action in scan mode without paths (expect failure)
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          pr-number: "1"
+          github-owner: infracost
+          github-repo: actions
+          # No pr-status → mode defaults to 'scan' for non-pull_request events
+          # No base-path or head-path → "Run scanner" step should fail with error
+
+      - name: Assert action failed due to missing scan paths
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # Without pr-status and without base/head paths, the action enters scan
+          # mode but then fails because base-path and head-path are required.
+          # The action should fail (not succeed).
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (missing base-path and head-path in scan mode)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: action should have failed without base-path and head-path"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

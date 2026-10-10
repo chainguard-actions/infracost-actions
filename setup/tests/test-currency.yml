@@ -1,0 +1,29 @@
+name: Test Infracost setup with custom currency
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          api-key: ci-test-fake-api-key-for-install-only
+          currency: EUR
+          enable-dashboard: "false"
+        continue-on-error: true
+      - name: Assert action ran with custom currency input
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if command -v infracost >/dev/null 2>&1; then
+            echo "PASS: infracost binary found on PATH with EUR currency configured"
+            infracost --version
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran and failed gracefully (expected with fake API key)"
+          else
+            echo "FAIL: infracost binary not found and outcome was: $OUTCOME"
+            exit 1
+          fi

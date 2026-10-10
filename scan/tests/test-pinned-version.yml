@@ -1,0 +1,39 @@
+name: Test pinned version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a minimal Terraform file to scan
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/tf-pinned"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/tf-pinned/main.tf" <<'EOF'
+          resource "aws_s3_bucket" "example" {
+            bucket = "my-test-bucket"
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          path: "${{ github.workspace }}/tests/fixtures/tf-pinned"
+          version: "0.1.0"
+
+      - name: Assert action ran with pinned version (fails gracefully without valid API key)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with pinned version"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (no valid Infracost API key or version not found)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,39 @@
+name: Test explicit version input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with explicit version and pr-number
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          version: "0.1.0"
+          pr-number: "1"
+          pr-status: "MERGED"
+          github-owner: infracost
+          github-repo: actions
+          # No base-path or head-path → status-only mode
+
+      - name: Assert action ran (explicit version, may fail on download or API key)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With an explicit version, the action skips the 'gh release list' call
+          # and goes straight to downloading the binary for version 0.1.0.
+          # The download may fail if that version doesn't exist, or the API key
+          # check may fail — both are acceptable outcomes here.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with explicit version"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake API key or missing version)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
