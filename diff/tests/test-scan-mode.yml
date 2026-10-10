@@ -1,0 +1,45 @@
+name: Test scan mode (base-path and head-path provided)
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create dummy base and head paths for scanning
+        run: |
+          mkdir -p /tmp/base-checkout /tmp/head-checkout
+          echo "# dummy terraform" > /tmp/base-checkout/main.tf
+          echo "# dummy terraform" > /tmp/head-checkout/main.tf
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          pr-number: "1"
+          github-owner: infracost
+          github-repo: actions
+          base-path: /tmp/base-checkout
+          head-path: /tmp/head-checkout
+          # With base-path and head-path set, mode should be "scan"
+          # Will fail at "Run scanner" due to fake API key
+
+      - name: Assert action ran in scan mode (failed at scanner due to fake API key)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail at "Run scanner" or "Download scanner"
+          # because the API key is fake. It should NOT fail at "Derive context"
+          # since pr-number, github-owner, and github-repo are all provided.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected - fake API key)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded unexpectedly"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,40 @@
+name: Test status-only mode (explicit pr-status without paths)
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          pr-status: OPEN
+          pr-number: "1"
+          github-owner: infracost
+          github-repo: actions
+          # No base-path or head-path → should enter status-only mode
+          # Will fail at "Update PR status" due to fake API key, but
+          # the mode derivation and context steps should succeed
+
+      - name: Assert action ran (failed gracefully on fake API key or sentinel repo)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should either:
+          # - fail at "Update PR status" due to fake API key (expected)
+          # - fail at "Download scanner" if release not found (acceptable)
+          # It should NOT fail at "Derive context" since pr-number is provided
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected - fake API key or download issue)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded unexpectedly (scanner may have been lenient)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

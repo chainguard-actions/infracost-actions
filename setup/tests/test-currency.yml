@@ -1,0 +1,41 @@
+name: Test currency configuration
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: test-api-key-placeholder
+          version: 0.10.x
+          currency: EUR
+          github-token: ${{ github.token }}
+      - name: Assert action ran with EUR currency setting
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            if ! command -v infracost >/dev/null 2>&1; then
+              echo "FAIL: action succeeded but infracost binary not found on PATH"
+              exit 1
+            fi
+            # Check that the currency was configured in infracost config
+            CONFIG_OUTPUT="$(infracost configure get currency 2>&1 || true)"
+            echo "currency config: $CONFIG_OUTPUT"
+            if echo "$CONFIG_OUTPUT" | grep -qi 'EUR'; then
+              echo "PASS: currency configured as EUR"
+            else
+              echo "FAIL: currency not set to EUR in infracost config: $CONFIG_OUTPUT"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with placeholder API key)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

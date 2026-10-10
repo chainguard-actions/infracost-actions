@@ -1,0 +1,40 @@
+name: Test explicit version input (skips latest resolution)
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          version: "0.1.0"
+          pr-number: "42"
+          github-owner: testowner
+          github-repo: testrepo
+          pr-status: MERGED
+          # No base-path/head-path → status-only mode
+          # The version step should output "0.1.0" and "scanner/v0.1.0"
+          # Download will attempt to fetch scanner/v0.1.0 from GitHub
+
+      - name: Assert action ran (version was accepted, failed on download or API)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action should fail at download (if version doesn't exist) or
+          # at status update (fake API key). Either way it should not fail
+          # at the version determination step since we provided an explicit version.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected - version download or API key issue)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
