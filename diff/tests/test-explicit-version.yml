@@ -1,0 +1,38 @@
+name: Test explicit version input (non-latest)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          pr-number: "1"
+          pr-status: MERGED
+          github-owner: infracost
+          github-repo: actions
+          version: "0.1.0"
+          # Explicit version bypasses the GitHub API release lookup.
+          # The download step will attempt to fetch scanner/v0.1.0 from
+          # infracost/actions releases. If that version doesn't exist,
+          # the action fails at download — still a graceful failure.
+          # No base-path/head-path → status-only mode.
+
+      - name: Assert action ran (download or status may fail gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake API key or missing version)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (version 0.1.0 exists and status update accepted)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

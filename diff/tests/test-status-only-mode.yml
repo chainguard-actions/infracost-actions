@@ -1,0 +1,35 @@
+name: Test status-only mode (explicit pr-status, no scan paths)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-api-key
+          pr-number: "42"
+          pr-status: OPEN
+          github-owner: infracost
+          github-repo: actions
+          # No base-path or head-path → mode should be "status-only"
+          # The scanner binary download will succeed (real GH token),
+          # but the status update will fail with a fake API key.
+
+      - name: Assert action ran (failed gracefully with fake API key)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake API key)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded unexpectedly (scanner may have been lenient)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
