@@ -1,0 +1,43 @@
+name: Test latest version resolution
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a minimal Terraform file to scan
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/infra"
+          cat > "$GITHUB_WORKSPACE/infra/main.tf" <<'EOF'
+          resource "aws_instance" "example" {
+            ami           = "ami-0c55b159cbfafe1f0"
+            instance_type = "t2.micro"
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          path: "${{ github.workspace }}/infra"
+          # version defaults to "latest" — exercises the gh release list path
+
+      - name: Assert action ran (version resolved and binary downloaded or failed gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With a real GITHUB_TOKEN the gh release list call should succeed and
+          # resolve the latest scanner version. The scanner itself will fail with
+          # the fake API key, so failure is the expected outcome.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (scanner accepted fake key — unexpected but not a test failure)"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (invalid API key)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

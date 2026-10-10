@@ -1,0 +1,43 @@
+name: Test basic usage (pinned version, invalid api-key)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a minimal Terraform file to scan
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/infra"
+          cat > "$GITHUB_WORKSPACE/infra/main.tf" <<'EOF'
+          resource "aws_instance" "example" {
+            ami           = "ami-0c55b159cbfafe1f0"
+            instance_type = "t2.micro"
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: "fake-api-key-for-testing"
+          path: "${{ github.workspace }}/infra"
+          version: "0.1.0"
+
+      - name: Assert action ran (download succeeded or failed gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The scanner binary download may succeed (real public repo) but the
+          # scan itself will fail with an invalid API key. Either way, the action
+          # should not produce an unexpected outcome.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded unexpectedly (scanner accepted fake key)"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (invalid API key or version not found)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

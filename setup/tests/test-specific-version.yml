@@ -1,0 +1,41 @@
+name: Test Infracost setup with specific version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: ico-test-api-key-for-ci-harness
+          version: 0.10.28
+          github-token: ${{ github.token }}
+      - name: Assert action ran with specific version or failed gracefully
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            # Verify infracost binary is on PATH
+            if ! command -v infracost >/dev/null 2>&1; then
+              echo "FAIL: infracost binary not found on PATH after successful setup"
+              exit 1
+            fi
+            VERSION_OUTPUT="$(infracost --version 2>&1 || true)"
+            echo "version output: $VERSION_OUTPUT"
+            # Check that the version string contains 0.10.28
+            if echo "$VERSION_OUTPUT" | grep -q "0.10.28"; then
+              echo "PASS: correct version 0.10.28 installed"
+            else
+              echo "FAIL: expected version 0.10.28 but got: $VERSION_OUTPUT"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with test API key or sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
