@@ -1,0 +1,19 @@
+name: Test version - full semver tag accepted
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          api-key: "ic-fake-key-for-testing"
+          version: "2.0.1"
+          # Full semver version - should be accepted without error or warning
+          # No base-path or head-path: scan=false, no Docker needed
+          # No pull_request event: pr_status='', no status update
+      - name: Assert action completed successfully with semver version
+        run: |
+          echo "PASS: action accepted version '2.0.1'"

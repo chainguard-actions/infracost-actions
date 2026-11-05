@@ -1,0 +1,18 @@
+name: Test version resolution - valid numeric tag, no scan
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          api-key: "ic-fake-key-for-testing"
+          version: "2"
+          # No base-path or head-path: scan=false, no Docker needed
+          # No pull_request event: pr_status='', no status update step runs
+      - name: Assert action completed successfully
+        run: |
+          echo "PASS: action completed with version=2, no scan, no status update"

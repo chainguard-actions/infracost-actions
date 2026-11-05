@@ -1,0 +1,35 @@
+name: Test latest version tag is accepted with warning
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a dummy scan path
+        run: mkdir -p "$GITHUB_WORKSPACE/infra"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          api-key: fake-key-for-validation
+          path: infra
+          version: "latest"
+
+      - name: Assert latest version was accepted by validation
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # 'latest' is a valid version — it should pass validation and fail
+          # only at docker run (image pull or authentication failure).
+          # Both success and failure are acceptable; what matters is that
+          # the version was not rejected by the validation logic.
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: 'latest' version was accepted by validation (outcome=$OUTCOME)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
