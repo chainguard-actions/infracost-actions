@@ -1,0 +1,55 @@
+name: Test version latest and digest formats
+on:
+  workflow_dispatch:
+jobs:
+  test-version-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # version: latest should resolve to ghcr.io/infracost/ci:latest with a warning
+      # No paths provided so scan is skipped; no pr-status so update is skipped.
+      # The action should succeed (image resolves, both conditional steps skipped).
+      - id: action-latest
+        uses: .
+        with:
+          api-key: fake-api-key-for-test
+          version: "latest"
+
+      - name: Assert action succeeded with version latest
+        run: |
+          echo "PASS: action completed successfully with version latest"
+
+  test-version-valid-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # A valid sha256 digest (64 hex chars) should resolve correctly.
+      # No paths provided so scan is skipped; no pr-status so update is skipped.
+      - id: action-digest
+        uses: .
+        with:
+          api-key: fake-api-key-for-test
+          version: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+      - name: Assert action succeeded with valid sha256 digest
+        run: |
+          echo "PASS: action completed successfully with valid sha256 digest"
+
+  test-version-prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # A prerelease version like 2.1.0-rc.1 should be accepted (rc suffix allowed)
+      # No paths provided so scan is skipped; no pr-status so update is skipped.
+      - id: action-prerelease
+        uses: .
+        with:
+          api-key: fake-api-key-for-test
+          version: "2.1.0-rc.1"
+
+      - name: Assert action succeeded with prerelease version
+        run: |
+          echo "PASS: action completed successfully with prerelease version 2.1.0-rc.1"
