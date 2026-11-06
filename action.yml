@@ -20,16 +20,33 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     # Checkout the branch you want Infracost to compare costs against, most commonly the target branch.
     - name: Checkout base branch
-      uses: actions/checkout@v3
+      uses: chainguard-actions/actions-checkout@44c54598b257617371589c99ff0b52dab29a2bb4 # v3
       with:
         ref: '${{ github.event.pull_request.base.ref }}'
 
     # Install the Infracost CLI, see https://github.com/infracost/actions/tree/master/setup
     # for other inputs such as version, and pricing-api-endpoint (for self-hosted users).
     - name: Setup Infracost
-      uses: infracost/actions/setup@v3
+      uses: chainguard-actions/infracost-actions/setup@a131e514a46a6d10978192745c024a9701678205 # v3
       with:
         api-key: ${{ inputs.api_key }}
 
@@ -42,7 +59,7 @@ runs:
 
 
     # Checkout the PR branch with your infrastructure changes.
-    - uses: actions/checkout@v3
+    - uses: chainguard-actions/actions-checkout@44c54598b257617371589c99ff0b52dab29a2bb4 # v3
 
     - name: Run Infracost
       run: |
@@ -52,6 +69,10 @@ runs:
                             --out-file=/tmp/infracost.json
 
     - name: Post Infracost comment
+      env:
+        GITHUB_TOKEN_VALUE: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        BEHAVIOR: ${{ inputs.behavior }}
       run: |
         # Posts a comment to the PR using the 'update' behavior.
         # This creates a single comment and updates it. The "quietest" option.
@@ -61,7 +82,7 @@ runs:
         #   new - Create a new cost estimate comment on every push.
         # See https://www.infracost.io/docs/features/cli_commands/#comment-on-pull-requests for other options.
         infracost comment github --path=/tmp/infracost.json \
-                                 --repo=$GITHUB_REPOSITORY \
-                                 --github-token=${{github.token}} \
-                                 --pull-request=${{github.event.pull_request.number}} \
-                                 --behavior=${{inputs.behavior}}
+                                 --repo="$GITHUB_REPOSITORY" \
+                                 --github-token="$GITHUB_TOKEN_VALUE" \
+                                 --pull-request="$PR_NUMBER" \
+                                 --behavior="$BEHAVIOR"
