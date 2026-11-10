@@ -1,6 +1,7 @@
 # This is a placeholder action, see https://github.com/infracost/actions/ for the Infracost actions and examples of how to use them.
 name: Infracost Actions
 description: See cloud cost estimates and FinOps best practices for Terraform in pull requests.
+
 author: infracost
 branding:
   icon: trending-up
@@ -41,12 +42,14 @@ runs:
       uses: chainguard-actions/actions-checkout@31bbccf724702f8a0dc7a3ed7db8fcca2066babc # v4
       with:
         ref: '${{ github.event.pull_request.base.ref }}'
+
     # Install the Infracost CLI, see https://github.com/infracost/actions/tree/master/setup
     # for other inputs such as version, and pricing-api-endpoint (for self-hosted users).
     - name: Setup Infracost
       uses: chainguard-actions/infracost-actions/setup@a131e514a46a6d10978192745c024a9701678205 # v3
       with:
         api-key: ${{ inputs.api_key }}
+
     # Generate an Infracost output JSON from the comparison branch, so that Infracost can compare the cost difference.
     - name: Generate Infracost cost estimate baseline
       shell: bash
@@ -54,8 +57,11 @@ runs:
         infracost breakdown --path=examples/terraform-directory/code \
                             --format=json \
                             --out-file=/tmp/infracost-base.json
+
+
     # Checkout the PR branch with your infrastructure changes.
     - uses: chainguard-actions/actions-checkout@31bbccf724702f8a0dc7a3ed7db8fcca2066babc # v4
+
     - name: Run Infracost
       shell: bash
       run: |
@@ -63,6 +69,7 @@ runs:
                             --format=json \
                             --compare-to=/tmp/infracost-base.json \
                             --out-file=/tmp/infracost.json
+
     - name: Post Infracost comment
       shell: bash
       env:

@@ -1,5 +1,6 @@
 name: "Infracost Scan"
 description: "Scan infrastructure code for cost changes, post a PR comment, and manage PR status in the Infracost dashboard."
+
 inputs:
   api-key:
     description: "Infracost API key for authentication."
@@ -36,6 +37,7 @@ inputs:
   repo-url:
     description: "Repository URL. Selects the repository the comment is posted to and the source links, so github-token needs write access to it. Defaults to the current repository."
     required: false
+
 runs:
   using: composite
   steps:
@@ -67,14 +69,11 @@ runs:
         write_output() {
           local name="$1"
           local value="$2"
-          local delimiter
-          delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
-
-          {
-            printf '%s<<%s\n' "$name" "$delimiter"
-            printf '%s\n' "$value"
-            printf '%s\n' "$delimiter"
-          } >> "$GITHUB_OUTPUT"
+          local safe
+          # Single-line value with CR/LF stripped so nothing can forge
+          # additional GITHUB_OUTPUT entries.
+          safe="$(printf '%s' "$value" | tr -d '\n\r')"
+          printf '%s=%s\n' "$name" "$safe" >> "$GITHUB_OUTPUT"
         }
 
         IMAGE="ghcr.io/infracost/ci"
@@ -117,6 +116,7 @@ runs:
             ;;
         esac
         write_output "ref" "$REF"
+
     # Only the status is derived here. The VCS contract is repeated in each
     # step's env: GITHUB_ENV would export it to the whole caller job.
     - name: Derive pull request status
@@ -169,6 +169,7 @@ runs:
         printf 'pr_status=%s\n' "$PR_STATUS" >> "$GITHUB_OUTPUT"
         printf 'scan=%s\n' "$SCAN" >> "$GITHUB_OUTPUT"
         echo "Infracost pull request status: ${PR_STATUS:-none}, scan: ${SCAN}"
+
     - name: Run scanner
       if: steps.context.outputs.scan == 'true'
       shell: bash
@@ -315,6 +316,7 @@ runs:
           echo "::notice::This step ran inside a container. If the failure above names ${GITHUB_WORKSPACE}, the host Docker daemon cannot see it — drop container: from the job, or use the container: job documented in infracost/ci instead of this action."
         fi
         exit "$STATUS"
+
     # The same repository URL and PR ID expressions as above: the dashboard is
     # keyed on the PR URL built from them, so the two steps must agree.
     - name: Update PR status

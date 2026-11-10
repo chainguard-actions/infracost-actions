@@ -1,5 +1,6 @@
 name: "Infracost Scan"
 description: "Scan infrastructure code and upload baseline cost data to the Infracost dashboard."
+
 inputs:
   api-key:
     description: "Infracost API key for authentication."
@@ -17,6 +18,7 @@ inputs:
   repo-url:
     description: "Repository URL for metadata."
     required: false
+
 runs:
   using: composite
   steps:
@@ -47,9 +49,10 @@ runs:
 
         write_output() {
           local name="$1"
-          local value="$2"
+          local value
+          value="$(printf '%s' "$2" | tr -d '\n\r')"
           local delimiter
-          delimiter="ghadelimiter_${RANDOM}_${RANDOM}_${RANDOM}_${RANDOM}"
+          delimiter="ghadelimiter_$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')"
 
           {
             printf '%s<<%s\n' "$name" "$delimiter"
@@ -98,6 +101,7 @@ runs:
             ;;
         esac
         write_output "ref" "$REF"
+
     - name: Run scanner
       shell: bash
       env:
